@@ -9,19 +9,6 @@ group_hosts:
   batch1.cs.ovh.zozoh.fr: 192.168.0.39
   proxy1.cs.ovh.zozoh.fr: 192.168.0.37
   media.cs.ovh.zozoh.fr: 192.168.0.38
-
-common_tools:
-  - curl
-  - htop
-  - emacs-nox
-  - git
-
-postgresql_packages:
-  - postgresql
-  - postgresql-contrib
-  - libpq-dev
-  - postgis
-  - postgresql-11-postgis-2.5
   
 postgresql_databases:
   - name: cathosphere

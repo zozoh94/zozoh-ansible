@@ -3,8 +3,9 @@ all:
   children:
     common:
       children:
-        proxy:
-          proxy1.ovh.zozoh.fr:
+        common_proxy:
+          hosts:
+            proxy1.ovh.zozoh.fr:
     gitlab:
       hosts:
         gitlab.ovh.zozoh.fr:
@@ -24,8 +25,8 @@ all:
             web1.cs.ovh.zozoh.fr:
         batch:
           hosts:
-            batch1.cs.ovh.zozoh.fr:          
-        proxy:
+            batch1.cs.ovh.zozoh.fr:
+        cs_proxy:
           hosts:
             proxy1.cs.ovh.zozoh.fr:
         media:

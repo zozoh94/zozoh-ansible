@@ -1,0 +1,11 @@
+---
+gitlab_domain: gitlab.zozoh.fr
+gitlab_external_url: "https://{{ gitlab_domain }}/"
+gitlab_redirect_http_to_https: false
+gitlab_create_self_signed_cert: false
+gitlab_nginx_listen_https: false
+gitlab_nginx_listen_port: 80
+gitlab_extra_settings:
+  - nginx:
+      - key: "listen_address"
+        value: "0.0.0.0"

@@ -5,4 +5,6 @@ roles:
   - name: geerlingguy.java
   - name: geerlingguy.elasticsearch
   - name: geerlingguy.rabbitmq
-  - name: geerlingguy.gitlab    
+  - name: geerlingguy.gitlab
+  - name: geerlingguy.nginx
+  - name: geerlingguy.certbot

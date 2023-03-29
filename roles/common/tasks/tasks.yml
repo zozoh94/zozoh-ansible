@@ -4,8 +4,8 @@
   become: yes
   lineinfile:
     path: "/etc/hosts"
-    regexp: ".*\t{{ item.key }}\t{{ item.key | split('.') | first }}"
-    line: "{{ item.value }}\t{{ item.key }}\t{{ item.key | split('.') | first }}"
+    regexp: ".*\t{{ item.key | replace('.' + domain, '') }}\t{{ item.key | split('.') | first }}"
+    line: "{{ item.value }}\t{{ item.key | replace('.' + domain, '') }}\t{{ item.key | split('.') | first }}"
     state: present
     backup: yes
   when: item.key != ansible_host
