@@ -1,0 +1,14 @@
+---
+- hosts: batch
+
+  become: yes
+  
+  vars:
+    sshd_listen: "{{ ansible_all_ipv4_addresses[0] }}"
+    install_docker: true
+    
+    cs_batch: true
+    
+  roles:
+    - common
+    - cs

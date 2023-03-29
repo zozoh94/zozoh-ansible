@@ -1,0 +1,14 @@
+---
+- hosts: broker
+  become: yes
+
+  vars:
+    redis_bind_interface: "{{ ansible_all_ipv4_addresses[1] }}"
+    redis_requirepass: "{{ redis_broker_password }}"
+
+    sshd_listen: "{{ ansible_all_ipv4_addresses[0] }}"
+
+  roles:
+    - common
+    - geerlingguy.redis
+    - rabbitmq

@@ -1,0 +1,45 @@
+---
+version: '3'
+
+services:
+  api:
+    restart: always
+    image: registry.zozoh.fr/cathosphere_api:latest
+    user: "${UID}:${GID}"
+    env_file:
+      - .env
+    ports:
+      - "${API_EXPOSE_PORT:-9981}:8000"
+
+  sign:
+    restart: always
+    image: registry.zozoh.fr/cathosphere_api:latest
+    user: "${UID}:${GID}"
+    env_file:
+      - .env
+    ports:
+      - "${SIGN_EXPOSE_PORT:-9982}:8000"
+
+  ws:
+    restart: always
+    image: registry.zozoh.fr/cathosphere_ws:latest
+    user: "${UID}:${GID}"
+    env_file:
+      - .env
+    ports:
+      - "${WS_EXPOSE_PORT:-9983}:8000"
+
+  admin:
+    restart: always
+    image: registry.zozoh.fr/cathosphere_api:latest
+    user: "${UID}:${GID}"
+    env_file:
+      - .env
+    ports:
+      - "${ADMIN_EXPOSE_PORT:-9984}:8000"
+
+  mjml:
+    restart: always
+    image: liminspace/mjml-tcpserver:latest
+    environment:
+      MJML_ARGS: "--mjml.minify=true --mjml.validationLevel=soft"

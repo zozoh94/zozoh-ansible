@@ -1,0 +1,8 @@
+---
+role_minio_played: false
+
+minio_deb_url: https://dl.min.io/server/minio/release/linux-amd64/archive/minio_20230313194617.0.0_amd64.deb
+minio_console_listen_address: 0.0.0.0
+minio_listen_address: 0.0.0.0
+minio_admin_password: minio_admin
+minio_browser_redirect_url: https://minio.domain.fr

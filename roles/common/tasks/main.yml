@@ -1,0 +1,4 @@
+---
+- name: Include common task
+  ansible.builtin.include_tasks: tasks.yml
+  when: not role_common_played

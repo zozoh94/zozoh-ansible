@@ -1,0 +1,17 @@
+---
+role_common_played: false
+
+sshd_listen: 0.0.0.0
+common_tools:
+  - curl
+  - htop
+
+install_docker: false
+registry_zozoh_username: enzo
+registry_zozoh_password: enzo
+docker_compose_url: https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
+docker_compose_checksum: "sha256:f3f10cf3dbb8107e9ba2ea5f23c1d2159ff7321d16f0a23051d68d8e2547b323"
+
+unattended_upgrades_enabled: true
+
+group_hosts: {}

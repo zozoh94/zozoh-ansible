@@ -1,0 +1,4 @@
+---
+- name: Include minio task
+  ansible.builtin.include_tasks: tasks.yml
+  when: not role_minio_played

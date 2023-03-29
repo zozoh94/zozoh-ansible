@@ -1,0 +1,37 @@
+---
+role_cs_played: false
+
+cs_batch: false
+
+cs_env: PROD
+cs_debug: False
+cs_domain: cs.domain.fr
+cs_api_expose_port: 9981
+cs_sign_expose_port: 9982
+cs_ws_expose_port: 9983
+cs_admin_expose_port: 9984
+cs_secret_key: CSSECRETKEYTOCHANGE
+cs_email_url: "smtp://cs.domain.fr"
+cs_sender_email: "cs@cs.domain.fr"
+cs_database_url: "postgis://cathosphere:cathosphere@postgres/cathosphere"
+cs_cache_url: "redis://redis:6379/1?client_class=django_redis.client.DefaultClient&serializer=django_redis.serializers.msgpack.MSGPackSerializer&compressor=django_redis.compressors.zlib.ZlibCompressor"
+cs_broker_url: "amqp://cathosphere:cathosphere@rabbitmq:5672//"
+cs_redis_channel_url: "redis://redis:6379/"
+cs_es_url: "es:9200"
+cs_aws_access_key_id: minio-user
+cs_aws_secret_access_key: minio-password
+cs_aws_s3_endpoint_url: "http://minio:9000"
+cs_aws_s3_custom_domain: "media.cs.domain.fr/cathosphere-uploads"
+cs_aws_s3_adressing_style: path
+cs_aws_s3_signature_version: s3
+cs_aws_mapquest_api_key: mapquestapikey
+cs_google_api_key: googleapikey
+cs_google_oauth2_key: googleoauth2key
+cs_google_oauth2_secret: googleoauth2secret
+cs_facebook_oauth2_key: facebookoauth2key
+cs_facebook_oauth2_secret: facebookoauth2secret
+cs_fcm_api_key: fcmapikey
+cs_apple_id_client: appleidclient
+cs_apple_id_team: appleidteam
+cs_apple_id_key: appleidkey
+cs_apple_id_secret: appleidsecret

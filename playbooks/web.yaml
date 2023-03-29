@@ -1,0 +1,12 @@
+---
+- hosts: web
+
+  become: yes
+  
+  vars:
+    sshd_listen: "{{ ansible_all_ipv4_addresses[0] }}"
+    install_docker: true
+    
+  roles:
+    - common
+    - cs

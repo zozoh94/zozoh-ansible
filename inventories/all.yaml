@@ -1,0 +1,33 @@
+---
+all:
+  children:
+    common:
+      children:
+        proxy:
+          proxy1.ovh.zozoh.fr:
+    gitlab:
+      hosts:
+        gitlab.ovh.zozoh.fr:
+    cs:
+      children:
+        pg:
+          hosts:
+            pg1.cs.ovh.zozoh.fr:
+        es:
+          hosts:
+            es1.cs.ovh.zozoh.fr:
+        broker:
+          hosts:
+            broker1.cs.ovh.zozoh.fr:
+        web:
+          hosts:
+            web1.cs.ovh.zozoh.fr:
+        batch:
+          hosts:
+            batch1.cs.ovh.zozoh.fr:          
+        proxy:
+          hosts:
+            proxy1.cs.ovh.zozoh.fr:
+        media:
+          hosts:
+            media.cs.ovh.zozoh.fr:

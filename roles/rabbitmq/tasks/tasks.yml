@@ -1,0 +1,43 @@
+---
+- name: Add erlang repository from cloudsmith.io
+  block:
+    - name: Install gpg
+      apt:
+        name: gpg 
+        state: present    
+    - name: Add key
+      apt_key:
+        url: https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-erlang/gpg.E495BB49CC4BBE5B.key
+        state: present
+    - name: Add repo
+      apt_repository:
+        repo: deb https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-erlang/deb/debian {{ ansible_distribution_release }} main
+        state: present
+
+- name: Install RabbitMQ
+  ansible.builtin.import_role:
+    name: geerlingguy.rabbitmq
+
+- name: Configure RabbitMQ listener
+  copy:
+    dest: "/etc/rabbitmq/rabbitmq.conf"
+    content: |
+      listeners.tcp.1 = {{ ansible_all_ipv4_addresses[1] }}:5672
+  notify: Restart RabbitMQ
+
+- name: Delete guest user
+  shell: "rabbitmqctl list_users | grep -q guest && rabbitmqctl delete_user guest || exit 0"
+  ignore_errors: true
+  
+- name: Create or edit admin user
+  shell: "rabbitmqctl add_user {{ rabbitmq_user }} {{ rabbitmq_password }} || rabbitmqctl change_password {{ rabbitmq_user }} {{ rabbitmq_password }}"
+
+- name: Add administrator tag to admin user
+  shell: "rabbitmqctl set_user_tags {{ rabbitmq_user }} administrator"
+
+- name: Add permissions to admin user
+  shell: 'rabbitmqctl set_permissions -p / {{ rabbitmq_user }} ".*" ".*" ".*"'
+  
+- name: Role rabbitmq played
+  ansible.builtin.set_fact:
+    role_rabbitmq_played: true

@@ -1,0 +1,17 @@
+---
+- hosts: media
+
+  become: yes
+  
+  vars:
+    sshd_listen: "{{ ansible_all_ipv4_addresses[0] }}"
+
+    minio_console_listen_address: "{{ ansible_all_ipv4_addresses[1] }}"
+    minio_listen_address: "{{ ansible_all_ipv4_addresses[1] }}"
+    minio_browser_redirect_url: http://minio.cathosphere.co
+    
+  roles:
+    - common
+    - minio
+
+  

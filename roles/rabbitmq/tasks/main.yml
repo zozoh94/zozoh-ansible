@@ -1,0 +1,4 @@
+---
+- name: Include rabbitmq task
+  ansible.builtin.include_tasks: tasks.yml
+  when: not role_rabbitmq_played

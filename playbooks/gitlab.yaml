@@ -1,0 +1,8 @@
+---
+- hosts: gitlab
+  become: yes
+  vars:
+    gitlab_domain: gitlab.zozoh.fr
+    gitlab_external_url: "https://{{ gitlab_domain }}/"
+    gitlab_redirect_http_to_https: false
+    gitlab_create_self_signed_cert: false

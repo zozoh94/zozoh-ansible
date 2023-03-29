@@ -1,0 +1,63 @@
+---
+- name: Update the /etc/hosts file with node name
+  tags: etchostsupdate
+  become: yes
+  lineinfile:
+    path: "/etc/hosts"
+    regexp: ".*\t{{ item.key }}\t{{ item.key | split('.') | first }}"
+    line: "{{ item.value }}\t{{ item.key }}\t{{ item.key | split('.') | first }}"
+    state: present
+    backup: yes
+  when: item.key != ansible_host
+  register: etchostsupdate
+  with_dict: "{{ group_hosts }}"
+
+- name: Listen SSH on admin interface
+  become: yes
+  lineinfile:
+    path: "/etc/ssh/sshd_config"
+    line: "ListenAddress {{ sshd_listen }}"
+    state: present
+  notify:
+    - Restart sshd
+
+- name: Update apt cache
+  become: yes
+  apt:
+    update_cache: true
+
+- name: Install unattended-upgrades package
+  apt:
+    name: unattended-upgrades
+    state: present
+  when: unattended_upgrades_enabled | bool
+
+- name: System security patches and updates must be installed and up-to-date
+  copy:
+    src: 20auto-upgrades
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+  when: unattended_upgrades_enabled | bool
+
+- name: Install required system packages
+  apt:
+    pkg:
+      - apt-transport-https
+      - ca-certificates
+      - software-properties-common
+    state: latest
+    
+- name: Install common tools
+  become: yes
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: true
+  with_items: "{{ common_tools }}"
+
+- name: Install Docker and log in
+  ansible.builtin.include_tasks: docker.yml
+  when: install_docker
+  
+- name: Role common played
+  ansible.builtin.set_fact:
+    role_common_played: true

@@ -1,0 +1,8 @@
+---
+roles:
+  - name: geerlingguy.redis
+  - name: geerlingguy.postgresql
+  - name: geerlingguy.java
+  - name: geerlingguy.elasticsearch
+  - name: geerlingguy.rabbitmq
+  - name: geerlingguy.gitlab    

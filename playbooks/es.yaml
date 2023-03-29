@@ -1,0 +1,56 @@
+---
+- hosts: es
+  become: yes
+  vars:
+    elasticsearch_network_host: 0.0.0.0
+    elasticsearch_heap_size_min: 6g
+    elasticsearch_heap_size_max: 8g
+    elasticsearch_extra_options: |
+       discovery.type: single-node
+       xpack.security.enabled: false
+       bootstrap.memory_lock: true
+
+    sshd_listen: "{{ ansible_all_ipv4_addresses[0] }}"
+
+  roles:
+    - common
+    - geerlingguy.java
+    - geerlingguy.elasticsearch
+
+  tasks:
+    - name: Disable swap for current session
+      command: swapoff -a
+      become: true
+
+    - name: Disable swap permanently, persist reboots
+      replace:
+        path: /etc/fstab
+        regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+        replace: '#\1\2\3swap\4'
+        backup: yes
+
+    - name: Create directory to store Elasticsearch systemd override.
+      file:
+        path: /etc/systemd/system/elasticsearch.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+        
+    - name: Copy Elasticsearch systemd configuration override.
+      copy:
+        content: |
+          [Service]
+          LimitMEMLOCK=infinity
+          LimitNOFILE=65535
+        dest: /etc/systemd/system/elasticsearch.service.d/override.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Enable and start Elasticsearch.
+      systemd:
+        name: elasticsearch
+        state: restarted
+        enabled: true
+        daemon_reload: true

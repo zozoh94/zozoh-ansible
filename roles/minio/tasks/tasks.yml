@@ -1,0 +1,50 @@
+---
+- name: Get deb
+  ansible.builtin.get_url:
+    url: "{{ minio_deb_url }}"
+    dest: /tmp/minio.deb
+- name: Install minio.deb package
+  become: yes
+  ansible.builtin.apt:
+    deb: /tmp/minio.deb
+- name: Add the user minio
+  ansible.builtin.user:
+    name: minio
+- name: Create run directory
+  ansible.builtin.file:
+    path: /var/run/minio
+    state: directory
+    mode: '0755'
+    owner: minio
+    group: minio
+- name: Create lib directory
+  ansible.builtin.file:
+    path: /var/lib/minio
+    state: directory
+    mode: '0775'
+    owner: minio
+    group: minio
+- name: Create systemd file
+  become: true
+  ansible.builtin.copy:
+    src: minio.service
+    dest: /etc/systemd/system/minio.service
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Enable minio
+    - Restart minio
+- name: Configure minio
+  copy:
+    dest: "/etc/default/minio"
+    content: |
+      MINIO_VOLUMES="/var/lib/minio"
+      MINIO_OPTS="--console-address {{ minio_console_listen_address }}:9001 --address {{ minio_listen_address }}:9000"
+      MINIO_ROOT_USER=minio_admin
+      MINIO_ROOT_PASSWORD={{ minio_admin_password }}
+      MINIO_BROWSER_REDIRECT_URL={{ minio_browser_redirect_url }}
+  notify:
+    - Restart minio
+- name: Role minio played
+  ansible.builtin.set_fact:
+    role_minio_played: true
