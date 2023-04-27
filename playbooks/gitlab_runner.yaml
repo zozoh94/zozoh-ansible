@@ -1,0 +1,16 @@
+---
+- hosts: gitlab:&runner
+  become: yes
+  vars:
+    gitlab_runner_runners:
+      - name: '{{ ansible_hostname }}'
+        state: present
+        executor: 'shell'
+        output_limit: 4096
+        concurrent_specific: '0'
+        url: "{{ gitlab_runner_url }}"
+        token: "{{ gitlab_runner_token }}"
+  
+  roles:
+    - common
+    - riemers.gitlab-runner

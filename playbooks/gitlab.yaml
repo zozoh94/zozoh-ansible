@@ -1,5 +1,5 @@
 ---
-- hosts: gitlab
+- hosts: gitlab:&webserver
   become: yes
 
   roles:

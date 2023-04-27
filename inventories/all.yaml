@@ -7,8 +7,13 @@ all:
           hosts:
             proxy1.ovh.zozoh.fr:
     gitlab:
-      hosts:
-        gitlab.ovh.zozoh.fr:
+      children:
+        webserver:
+          hosts:
+            gitlab.ovh.zozoh.fr:
+        runner:
+          hosts:
+            gitlab-runner1.ovh.zozoh.fr:
     cs:
       children:
         pg:

@@ -1,6 +1,5 @@
 ---
 - name: Update the /etc/hosts file with node name
-  tags: etchostsupdate
   become: yes
   lineinfile:
     path: "/etc/hosts"
@@ -9,9 +8,19 @@
     state: present
     backup: yes
   when: item.key != ansible_host
-  register: etchostsupdate
   with_dict: "{{ group_hosts }}"
 
+- name: Update /etc/cloud/templates/hosts.debian.tmpl file with node name
+  become: yes
+  lineinfile:
+    path: "/etc/cloud/templates/hosts.debian.tmpl"
+    regexp: ".*\t{{ item.key | replace('.' + domain, '') }}\t{{ item.key | split('.') | first }}"
+    line: "{{ item.value }}\t{{ item.key | replace('.' + domain, '') }}\t{{ item.key | split('.') | first }}"
+    state: present
+    backup: yes
+  when: item.key != ansible_host
+  with_dict: "{{ group_hosts }}"
+  
 - name: Listen SSH on admin interface
   become: yes
   lineinfile:
