@@ -2,6 +2,8 @@
 - hosts: gitlab:&runner
   become: yes
   vars:
+    sshd_listen: "{{ ansible_all_ipv4_addresses | ansible.netcommon.ipaddr(admin_network) | first }}"
+    
     gitlab_runner_runners:
       - name: '{{ ansible_hostname }}'
         state: present

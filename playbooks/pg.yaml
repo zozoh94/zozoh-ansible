@@ -4,14 +4,14 @@
   become: yes
   
   vars:
-    redis_bind_interface: "{{ ansible_all_ipv4_addresses[1] }}"
+    sshd_listen: "{{ ansible_all_ipv4_addresses | ansible.netcommon.ipaddr(admin_network) | first }}"
+    
+    redis_bind_interface: "{{ ansible_all_ipv4_addresses | ansible.netcommon.ipaddr(private_network) | first }}"
     redis_requirepass: "{{ redis_cache_password }}"
-
-    sshd_listen: "{{ ansible_all_ipv4_addresses[0] }}"
     
     postgresql_global_config_options:
       - option: listen_addresses
-        value: "{{ ansible_all_ipv4_addresses[1] }}"
+        value: "{{ ansible_all_ipv4_addresses | ansible.netcommon.ipaddr(private_network) | first }}"
       - option: log_directory
         value: "log"
 

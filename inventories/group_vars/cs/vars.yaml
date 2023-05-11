@@ -1,7 +1,10 @@
 ---
 private_network: "192.168.0.32/27"
+admin_network: "192.168.1.32/27"
 
 group_hosts:
+  gitlab.zozoh.fr: 192.168.0.41
+  registry.zozoh.fr: 192.168.0.41
   pg1.cs.ovh.zozoh.fr: 192.168.0.34
   es1.cs.ovh.zozoh.fr: 192.168.0.33
   broker1.cs.ovh.zozoh.fr: 192.168.0.35

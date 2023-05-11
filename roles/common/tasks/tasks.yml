@@ -25,6 +25,7 @@
   become: yes
   lineinfile:
     path: "/etc/ssh/sshd_config"
+    regexp: "ListenAddress .+"    
     line: "ListenAddress {{ sshd_listen }}"
     state: present
   notify:

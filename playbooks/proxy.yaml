@@ -3,7 +3,9 @@
   become: yes
   vars:
     certbot_auto_renew_user: "certbot"
-  
+
+    sshd_listen: "{{ ansible_all_ipv4_addresses | ansible.netcommon.ipaddr(admin_network) | first }}"
+    
   tasks:
     - name: Add the user minio
       ansible.builtin.user:
@@ -42,3 +44,6 @@
     - name: Play nginx
       ansible.builtin.include_role:
         name: geerlingguy.nginx
+
+  roles:
+    - common

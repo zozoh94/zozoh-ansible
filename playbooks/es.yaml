@@ -10,7 +10,7 @@
        xpack.security.enabled: false
        bootstrap.memory_lock: true
 
-    sshd_listen: "{{ ansible_all_ipv4_addresses[0] }}"
+    sshd_listen: "{{ ansible_all_ipv4_addresses | ansible.netcommon.ipaddr(admin_network) | first }}"
 
   roles:
     - common

@@ -1,4 +1,7 @@
 ---
+private_network: "192.168.0.64/27"
+admin_network: "192.168.1.64/27"
+
 gitlab_domain: gitlab.zozoh.fr
 gitlab_external_url: "https://{{ gitlab_domain }}/"
 gitlab_create_self_signed_cert: true
