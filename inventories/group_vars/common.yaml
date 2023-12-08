@@ -57,6 +57,7 @@ nginx_extra_conf_options: |
     
       proxy_pass $targetBackend;       
       ssl_preread on;
+      proxy_protocol on;
     }
   }
 nginx_proxy_cache_path: "/var/cache/nginx_reverse levels=1:2 keys_zone=reverse:10m max_size=10g inactive=60m"
@@ -70,7 +71,7 @@ nginx_vhosts:
         proxy_set_header        Host                $http_host;
         proxy_set_header        X-Real-IP           $remote_addr;
         proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   https;
+        proxy_set_header        X-Forwarded-Proto   $scheme;
         proxy_set_header        X-Frame-Options     SAMEORIGIN;
         
         proxy_pass http://192.168.0.254;
@@ -79,7 +80,7 @@ nginx_vhosts:
     server_name: "gitlab.zozoh.fr"
     extra_parameters: |
       return 301 https://gitlab.zozoh.fr$request_uri;
-  - listen: "4443 ssl http2"
+  - listen: "4443 ssl http2 proxy_protocol"
     server_name: "gitlab.zozoh.fr"
     access_log: "/var/log/nginx/gitlab.access.log"
     error_log: "/var/log/nginx/gitlab.error.log"
@@ -96,7 +97,7 @@ nginx_vhosts:
         proxy_set_header        Host                $http_host;
         proxy_set_header        X-Real-IP           $remote_addr;
         proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   https;
+        proxy_set_header        X-Forwarded-Proto   $scheme;
         proxy_set_header        X-Frame-Options     SAMEORIGIN;
 
         proxy_cache reverse;
@@ -116,7 +117,7 @@ nginx_vhosts:
     server_name: "registry.zozoh.fr"
     extra_parameters: |
       return 301 https://registry.zozoh.fr$request_uri;
-  - listen: "4443 ssl http2"
+  - listen: "4443 ssl http2 proxy_protocol"
     server_name: "registry.zozoh.fr"
     access_log: "/var/log/nginx/registry.access.log"
     error_log: "/var/log/nginx/registry.error.log"
@@ -136,7 +137,7 @@ nginx_vhosts:
         proxy_set_header        Host                $http_host;
         proxy_set_header        X-Real-IP           $remote_addr;
         proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   https;
+        proxy_set_header        X-Forwarded-Proto   $scheme;
         proxy_set_header        X-Frame-Options     SAMEORIGIN;
 
         proxy_pass http://gitlab_registry;
@@ -146,7 +147,7 @@ nginx_vhosts:
       include /etc/nginx/ssl_options;
       ssl_dhparam /etc/nginx/ssl_dhparams.pem;      
   - listen: "80"
-    server_name: "zozoh.fr *.zozoh.fr cathosphere.co *.cathoshere.co lagabelle-saint-hilaire.fr *.lagabelle-saint-hilaire.fr urbvm.fr *.urbvm.fr"
+    server_name: "zozoh.fr cloud.zozoh.fr imap.zozoh.fr smtp.zozoh.fr collaboraonline.zozoh.fr postfix.zozoh.fr mail.zozoh.fr minio.cathosphere.co cathosphere.co ws.cathosphere.co api.cathosphere.co admin.cathosphere.co sign.cathosphere.co beta.cathosphere.co app.cathosphere.co ordo69.cathosphere.co ordo62.cathosphere.co gmaps.cathosphere.co urbvm.fr cloud.zozoh.fr collaboraonline.urbvm.fr www.urbvm.fr cloud.urbvm.fr lagabelle-saint-hilaire.fr media.lagabelle-saint-hilaire.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.urbvm.fr autodiscover.urbvm.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr autoconfig.cathosphere.co autodiscover.cathosphere.co api.eventcounter.zozoh.fr admin.eventcounter.zozoh.fr eventcounter.zozoh.fr mariage-jade-et-bastien.zozoh.fr"
     extra_parameters: |
       location / {
         gzip                    off;
@@ -154,7 +155,7 @@ nginx_vhosts:
         proxy_set_header        Host                $http_host;
         proxy_set_header        X-Real-IP           $remote_addr;
         proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   https;
+        proxy_set_header        X-Forwarded-Proto   $scheme;
         proxy_set_header        X-Frame-Options     SAMEORIGIN;
         
         proxy_pass http://192.168.0.97;

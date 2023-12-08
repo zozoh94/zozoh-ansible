@@ -24,9 +24,38 @@
     postgresql_locales:
       - 'en_US.UTF-8'
       - 'fr_FR.UTF-8'
-  roles:
-    - common
-    - geerlingguy.redis
-    - geerlingguy.postgresql
 
-  
+    postgresql_version: 15
+    postgresql_data_dir: "/var/lib/postgresql/{{ postgresql_version }}/main"
+    postgresql_bin_path: "/usr/lib/postgresql/{{ postgresql_version }}/bin"
+    postgresql_config_path: "/etc/postgresql/{{ postgresql_version }}/main"
+    postgresql_daemon: "postgresql@{{ postgresql_version }}-main"
+    postgresql_packages:
+      - postgresql-15
+      - postgresql-15-postgis-3
+      - postgresql-client-15
+      - postgresql-contrib
+      - libpq-dev
+
+  tasks:
+    - name: Play common
+      ansible.builtin.include_role:
+        name: common
+    - name: Install gpg
+      apt:
+        name: gpg
+        state: present
+    - name: Add key
+      apt_key:
+        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        state: present
+    - name: Add repo
+      apt_repository:
+        repo: deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main
+        state: present
+    - name: Play redis
+      ansible.builtin.include_role:
+        name: geerlingguy.redis
+    - name: Play postgresql
+      ansible.builtin.include_role:
+        name: geerlingguy.postgresql
