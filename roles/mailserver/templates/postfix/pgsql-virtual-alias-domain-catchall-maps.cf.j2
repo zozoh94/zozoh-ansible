@@ -1,0 +1,6 @@
+hosts = {{ mailserver_db_host }}
+user = {{ mailserver_db_user }}
+password = {{ mailserver_db_password }}
+dbname = {{ mailserver_db_name }}
+
+query = SELECT goto FROM alias, alias_domain WHERE alias_domain.alias_domain = '%d' AND alias.address = CONCAT('@', alias_domain.target_domain) AND alias.active = TRUE AND alias_domain.active = TRUE

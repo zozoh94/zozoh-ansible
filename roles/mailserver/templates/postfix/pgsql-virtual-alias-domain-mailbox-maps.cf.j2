@@ -1,0 +1,6 @@
+hosts = {{ mailserver_db_host }}
+user = {{ mailserver_db_user }}
+password = {{ mailserver_db_password }}
+dbname = {{ mailserver_db_name }}
+
+query = SELECT maildir FROM mailbox, alias_domain WHERE alias_domain.alias_domain = '%d' AND mailbox.username = CONCAT('%u', '@', alias_domain.target_domain) AND mailbox.active = TRUE AND alias_domain.active = TRUE

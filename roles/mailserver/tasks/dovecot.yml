@@ -1,0 +1,36 @@
+---
+- name: Deploy Dovecot main configuration
+  ansible.builtin.template:
+    src: dovecot/dovecot.conf.j2
+    dest: /etc/dovecot/dovecot.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart dovecot
+
+- name: Deploy Dovecot SQL configuration
+  ansible.builtin.template:
+    src: dovecot/dovecot-sql.conf.ext.j2
+    dest: /etc/dovecot/dovecot-sql.conf.ext
+    owner: root
+    group: dovecot
+    mode: "0640"
+  notify: Restart dovecot
+
+- name: Deploy Dovecot conf.d files
+  ansible.builtin.template:
+    src: "dovecot/conf.d/{{ item }}.j2"
+    dest: "/etc/dovecot/conf.d/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - 10-auth.conf
+    - 10-mail.conf
+    - 10-master.conf
+    - 10-ssl.conf
+    - 15-mailboxes.conf
+    - 20-lmtp.conf
+    - 90-sieve.conf
+    - auth-sql.conf.ext
+  notify: Restart dovecot

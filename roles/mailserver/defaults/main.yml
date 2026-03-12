@@ -1,0 +1,96 @@
+---
+# Role idempotency guard
+role_mailserver_played: false
+
+# ─── General ────────────────────────────────────────────────────────────────────
+mailserver_hostname: "mail.{{ mailserver_domain }}"
+mailserver_domain: "zozoh.fr"
+mailserver_admin_email: "admin@{{ mailserver_domain }}"
+
+# List of virtual mail domains to configure
+mailserver_domains:
+  - "{{ mailserver_domain }}"
+
+# ─── vmail user ─────────────────────────────────────────────────────────────────
+mailserver_vmail_uid: 5000
+mailserver_vmail_gid: 5000
+mailserver_vmail_home: /var/mail
+mailserver_vmail_dir: /var/mail/vhosts
+
+# ─── PostgreSQL ─────────────────────────────────────────────────────────────────
+mailserver_db_host: "127.0.0.1"
+mailserver_db_name: "postfix"
+mailserver_db_user: "postfix"
+mailserver_db_password: "CHANGEME_DB_PASSWORD"
+
+# ─── Mailboxes & Aliases (managed via Ansible, no web UI) ──────────────────────
+# Each entry: { username: "user@domain.tld", password: "plaintext_or_hash", name: "Display Name" }
+# Passwords will be hashed with BLF-CRYPT if provided in plaintext
+mailserver_mailboxes: []
+#  - username: "enzo@zozoh.fr"
+#    password: "changeme"
+#    name: "Enzo"
+
+# Each entry: { address: "alias@domain.tld", goto: "target@domain.tld" }
+mailserver_aliases: []
+#  - address: "postmaster@zozoh.fr"
+#    goto: "enzo@zozoh.fr"
+
+# ─── TLS / Let's Encrypt ───────────────────────────────────────────────────────
+mailserver_tls_cert: "/etc/letsencrypt/live/{{ mailserver_domain }}/cert.pem"
+mailserver_tls_key: "/etc/letsencrypt/live/{{ mailserver_domain }}/privkey.pem"
+mailserver_tls_chain: "/etc/letsencrypt/live/{{ mailserver_domain }}/chain.pem"
+mailserver_tls_fullchain: "/etc/letsencrypt/live/{{ mailserver_domain }}/fullchain.pem"
+mailserver_certbot_email: "{{ mailserver_admin_email }}"
+# Set to false if you manage certificates externally
+mailserver_certbot_enabled: true
+
+# ─── Postfix ────────────────────────────────────────────────────────────────────
+mailserver_message_size_limit: 502400000
+mailserver_mailbox_size_limit: 1024000000
+
+# Virtual aliases file (system accounts -> mail addresses)
+mailserver_virtual_aliases:
+  root: "postmaster@{{ mailserver_domain }}"
+  clamav: "postmaster@{{ mailserver_domain }}"
+  postmaster: "postmaster@{{ mailserver_domain }}"
+
+# ─── DKIM ───────────────────────────────────────────────────────────────────────
+mailserver_dkim_selector: "mail"
+mailserver_dkim_key_bits: 2048
+# Directory for DKIM keys
+mailserver_dkim_key_dir: /etc/opendkim/keys
+
+# ─── OpenDMARC ──────────────────────────────────────────────────────────────────
+mailserver_dmarc_reject_failures: false
+
+# ─── SpamAssassin ───────────────────────────────────────────────────────────────
+mailserver_spamassassin_max_children: 5
+mailserver_spamassassin_cron_update: true
+
+# ─── OVH DNS Automation ────────────────────────────────────────────────────────
+# Set to true to create DNS records automatically
+mailserver_ovh_dns_enabled: false
+
+# OVH API credentials
+# Generate at: https://eu.api.ovh.com/createToken/
+# Required rights (GET/POST/PUT/DELETE):
+#   /domain/zone/*
+mailserver_ovh_endpoint: "ovh-eu"
+mailserver_ovh_application_key: ""
+mailserver_ovh_application_secret: ""
+mailserver_ovh_consumer_key: ""
+
+# DNS record values (auto-computed if not overridden)
+mailserver_dns_mx_priority: 10
+mailserver_dns_spf: "v=spf1 mx ~all"
+mailserver_dns_dmarc: "v=DMARC1; p=quarantine; rua=mailto:{{ mailserver_admin_email }}; ruf=mailto:{{ mailserver_admin_email }}; sp=quarantine; ri=86400"
+
+# Server public IP for DNS A records (auto-detected if empty)
+mailserver_public_ip: ""
+
+# ─── Password hashing ──────────────────────────────────────────────────────────
+mailserver_password_scheme: "BLF-CRYPT"
+
+# ─── Additional submission port ────────────────────────────────────────────────
+mailserver_extra_submission_port: 2525

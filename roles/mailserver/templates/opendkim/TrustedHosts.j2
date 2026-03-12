@@ -1,0 +1,6 @@
+127.0.0.1
+localhost
+::1
+{% for domain in mailserver_domains %}
+*.{{ domain }}
+{% endfor %}

@@ -1,0 +1,152 @@
+#######################
+## GENERALS SETTINGS ##
+#######################
+
+smtpd_banner         = $myhostname ESMTP $mail_name (Debian/GNU)
+biff                 = no
+append_dot_mydomain  = no
+readme_directory     = no
+delay_warning_time   = 4h
+mailbox_command      = procmail -a "$EXTENSION"
+recipient_delimiter  = +
+disable_vrfy_command = yes
+message_size_limit   = {{ mailserver_message_size_limit }}
+mailbox_size_limit   = {{ mailserver_mailbox_size_limit }}
+
+inet_interfaces = all
+inet_protocols = all
+
+myhostname = {{ mailserver_hostname }}
+myorigin      = $mydomain
+mydestination = localhost localhost.$mydomain
+mynetworks    = 127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+
+alias_maps     = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+
+####################
+## TLS PARAMETERS ##
+####################
+smtputf8_enable = yes
+
+# Smtp ( OUTGOING / Client )
+smtp_tls_loglevel            = 1
+smtp_tls_security_level      = dane
+smtp_dns_support_level       = dnssec
+smtp_tls_CAfile              = {{ mailserver_tls_chain }}
+smtp_tls_protocols           = !SSLv2, !SSLv3
+smtp_tls_mandatory_protocols = !SSLv2, !SSLv3
+smtp_tls_mandatory_ciphers   = medium
+smtp_tls_note_starttls_offer = yes
+
+# Smtpd ( INCOMING / Server )
+smtpd_tls_loglevel            = 1
+smtpd_tls_auth_only           = yes
+smtpd_tls_security_level      = may
+smtpd_tls_received_header     = yes
+smtpd_tls_protocols           = !SSLv2, !SSLv3
+smtpd_tls_mandatory_protocols = !SSLv2, !SSLv3
+smtpd_tls_mandatory_ciphers   = medium
+smtpd_tls_exclude_ciphers     = aNULL,eNULL,EXPORT,DES,3DES,RC2,RC4,MD5,PSK,SRP,DSS,AECDH,ADH,SEED
+
+smtpd_tls_CAfile              = $smtp_tls_CAfile
+smtpd_tls_cert_file           = {{ mailserver_tls_cert }}
+smtpd_tls_key_file            = {{ mailserver_tls_key }}
+smtpd_tls_dh1024_param_file   = $config_directory/dh2048.pem
+smtpd_tls_dh512_param_file    = $config_directory/dh512.pem
+
+tls_preempt_cipherlist = yes
+tls_random_source      = dev:/dev/urandom
+
+smtp_tls_session_cache_database  = btree:${data_directory}/smtp_scache
+smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache
+lmtp_tls_session_cache_database  = btree:${data_directory}/lmtp_scache
+
+#####################
+## SASL PARAMETERS ##
+#####################
+
+smtpd_sasl_auth_enable          = yes
+smtpd_sasl_type                 = dovecot
+smtpd_sasl_path                 = private/auth
+smtpd_sasl_security_options     = noanonymous
+smtpd_sasl_tls_security_options = $smtpd_sasl_security_options
+smtpd_sasl_local_domain         = $mydomain
+smtpd_sasl_authenticated_header = yes
+
+smtpd_sender_login_maps  = pgsql:/etc/postfix/pgsql-sender-login-maps.cf
+
+broken_sasl_auth_clients = yes
+
+##############################
+## VIRTUALS MAPS PARAMETERS ##
+##############################
+
+virtual_uid_maps        = static:{{ mailserver_vmail_uid }}
+virtual_gid_maps        = static:{{ mailserver_vmail_gid }}
+virtual_minimum_uid     = {{ mailserver_vmail_uid }}
+virtual_mailbox_base    = {{ mailserver_vmail_home }}
+virtual_transport       = lmtp:unix:private/dovecot-lmtp
+virtual_mailbox_domains = pgsql:/etc/postfix/pgsql-virtual-mailbox-domains.cf
+virtual_mailbox_maps    = pgsql:/etc/postfix/pgsql-virtual-mailbox-maps.cf,
+                          pgsql:/etc/postfix/pgsql-virtual-alias-domain-mailbox-maps.cf
+virtual_alias_maps      = pgsql:/etc/postfix/pgsql-virtual-alias-maps.cf,
+                          pgsql:/etc/postfix/pgsql-virtual-alias-domain-catchall-maps.cf,
+                          hash:/etc/postfix/virtual
+
+######################
+## ERRORS REPORTING ##
+######################
+
+notify_classes = resource, software
+
+error_notice_recipient     = {{ mailserver_admin_email }}
+
+##################
+## RESTRICTIONS ##
+##################
+
+smtpd_helo_required = yes
+
+smtpd_relay_restrictions=
+    permit_mynetworks,
+    permit_sasl_authenticated,
+    reject_unauth_destination
+
+smtpd_recipient_restrictions =
+     permit_mynetworks,
+     permit_sasl_authenticated,
+     reject_unknown_recipient_domain,
+     reject_non_fqdn_recipient,
+     reject_unlisted_recipient,
+     reject_rbl_client zen.spamhaus.org
+
+smtpd_helo_restrictions =
+     permit_mynetworks,
+     permit_sasl_authenticated,
+     reject_invalid_helo_hostname,
+     reject_non_fqdn_helo_hostname
+
+smtpd_client_restrictions =
+     permit_mynetworks,
+     permit_inet_interfaces,
+     permit_sasl_authenticated
+
+smtpd_sender_restrictions =
+     reject_non_fqdn_sender,
+     reject_unknown_sender_domain
+     reject_sender_login_mismatch,
+     reject_unlisted_sender,
+     reject_rhsbl_sender dbl.spamhaus.org=127.0.1.[2..99],
+     reject_rhsbl_helo dbl.spamhaus.org=127.0.1.[2..99],
+     reject_rhsbl_reverse_client dbl.spamhaus.org=127.0.1.[2..99]
+
+###############
+## MILTERS   ##
+###############
+
+milter_protocol = 6
+milter_default_action = accept
+smtpd_milters = unix:/opendkim/opendkim.sock, unix:/opendmarc/opendmarc.sock
+non_smtpd_milters = unix:/opendkim/opendkim.sock
+compatibility_level = 2

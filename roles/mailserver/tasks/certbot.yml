@@ -1,0 +1,23 @@
+---
+- name: Check if TLS certificate exists
+  ansible.builtin.stat:
+    path: "{{ mailserver_tls_cert }}"
+  register: tls_cert_stat
+
+- name: Obtain Let's Encrypt certificate
+  ansible.builtin.command: >
+    certbot certonly --standalone --non-interactive --agree-tos
+    --email {{ mailserver_certbot_email }}
+    -d {{ mailserver_hostname }}
+    -d {{ mailserver_domain }}
+  when: not tls_cert_stat.stat.exists
+  register: certbot_result
+  changed_when: "'Successfully received certificate' in certbot_result.stdout"
+
+- name: Set up certbot auto-renewal cron
+  ansible.builtin.cron:
+    name: "certbot renewal"
+    minute: "0"
+    hour: "3"
+    job: "certbot renew --quiet --post-hook 'systemctl reload postfix dovecot'"
+    user: root

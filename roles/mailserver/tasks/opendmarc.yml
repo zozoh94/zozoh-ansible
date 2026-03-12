@@ -1,0 +1,17 @@
+---
+- name: Create Postfix OpenDMARC socket directory
+  ansible.builtin.file:
+    path: /var/spool/postfix/opendmarc
+    state: directory
+    owner: opendmarc
+    group: postfix
+    mode: "0750"
+
+- name: Deploy OpenDMARC configuration
+  ansible.builtin.template:
+    src: opendmarc/opendmarc.conf.j2
+    dest: /etc/opendmarc.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart opendmarc

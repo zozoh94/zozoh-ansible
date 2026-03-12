@@ -1,0 +1,88 @@
+---
+- name: Create OpenDKIM directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: opendkim
+    group: opendkim
+    mode: "0750"
+  loop:
+    - /etc/opendkim
+    - /etc/opendkim/keys
+
+- name: Create per-domain DKIM key directories
+  ansible.builtin.file:
+    path: "{{ mailserver_dkim_key_dir }}/{{ item }}"
+    state: directory
+    owner: opendkim
+    group: opendkim
+    mode: "0750"
+  loop: "{{ mailserver_domains }}"
+
+- name: Generate DKIM keys for each domain
+  ansible.builtin.command: >
+    opendkim-genkey -s {{ mailserver_dkim_selector }}
+    -b {{ mailserver_dkim_key_bits }}
+    -d {{ item }}
+    -D {{ mailserver_dkim_key_dir }}/{{ item }}
+  args:
+    creates: "{{ mailserver_dkim_key_dir }}/{{ item }}/{{ mailserver_dkim_selector }}.private"
+  loop: "{{ mailserver_domains }}"
+
+- name: Set DKIM key ownership
+  ansible.builtin.file:
+    path: "{{ mailserver_dkim_key_dir }}/{{ item }}/{{ mailserver_dkim_selector }}.private"
+    owner: opendkim
+    group: opendkim
+    mode: "0600"
+  loop: "{{ mailserver_domains }}"
+
+- name: Deploy OpenDKIM configuration
+  ansible.builtin.template:
+    src: opendkim/opendkim.conf.j2
+    dest: /etc/opendkim.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart opendkim
+
+- name: Deploy OpenDKIM KeyTable
+  ansible.builtin.template:
+    src: opendkim/KeyTable.j2
+    dest: /etc/opendkim/KeyTable
+    owner: opendkim
+    group: opendkim
+    mode: "0644"
+  notify: Restart opendkim
+
+- name: Deploy OpenDKIM SigningTable
+  ansible.builtin.template:
+    src: opendkim/SigningTable.j2
+    dest: /etc/opendkim/SigningTable
+    owner: opendkim
+    group: opendkim
+    mode: "0644"
+  notify: Restart opendkim
+
+- name: Deploy OpenDKIM TrustedHosts
+  ansible.builtin.template:
+    src: opendkim/TrustedHosts.j2
+    dest: /etc/opendkim/TrustedHosts
+    owner: opendkim
+    group: opendkim
+    mode: "0644"
+  notify: Restart opendkim
+
+- name: Create Postfix OpenDKIM socket directory
+  ansible.builtin.file:
+    path: /var/spool/postfix/opendkim
+    state: directory
+    owner: opendkim
+    group: postfix
+    mode: "0750"
+
+- name: Read DKIM public keys for DNS
+  ansible.builtin.slurp:
+    src: "{{ mailserver_dkim_key_dir }}/{{ item }}/{{ mailserver_dkim_selector }}.txt"
+  register: dkim_public_keys
+  loop: "{{ mailserver_domains }}"

@@ -1,0 +1,4 @@
+protocol lmtp {
+  postmaster_address = postmaster@{{ mailserver_domain }}
+  mail_plugins = $mail_plugins sieve
+}

@@ -1,0 +1,16 @@
+# Based on implementation of @JoshData (initially by @mkropat) for Mail-in-a-Box Project
+# https://github.com/mail-in-a-box/mailinabox
+
+# Remove the first line of the Received: header to hide the user's home IP address.
+# OpenDKIM requires that a Received: header be present when signing outbound mail.
+/^\s*Received:[^\n]*(.*)/  REPLACE Received: from authenticated-user ({{ mailserver_hostname }} [127.0.0.1])$1
+
+# Remove typically private information
+/^\s*User-Agent:/          IGNORE
+/^\s*X-Enigmail:/          IGNORE
+/^\s*X-Mailer:/            IGNORE
+/^\s*X-Originating-IP:/    IGNORE
+/^\s*X-Pgp-Agent:/         IGNORE
+
+# Strip user agent info from Mime-Version header
+/^\s*(Mime-Version:\s*[0-9\.]+)\s.+/  REPLACE $1

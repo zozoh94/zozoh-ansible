@@ -1,0 +1,11 @@
+passdb {
+  driver = sql
+  args = /etc/dovecot/dovecot-sql.conf.ext
+}
+
+# %d = domain.tld
+# %n = username
+userdb {
+  driver = static
+  args = uid=vmail gid=vmail home={{ mailserver_vmail_dir }}/%d/%n
+}

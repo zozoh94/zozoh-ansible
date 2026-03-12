@@ -1,0 +1,14 @@
+AutoRestart             Yes
+AutoRestartRate         10/1h
+UMask                   0002
+Syslog                  true
+
+AuthservID              "{{ mailserver_domain }}"
+TrustedAuthservIDs      "{{ mailserver_domain }}"
+IgnoreHosts             /etc/opendkim/TrustedHosts
+IgnoreMailFrom          "{{ mailserver_domain }}"
+RejectFailures          {{ mailserver_dmarc_reject_failures | lower }}
+
+UserID                  opendmarc:opendmarc
+PidFile                 /var/run/opendmarc/opendmarc.pid
+Socket                  local:/var/spool/postfix/opendmarc/opendmarc.sock

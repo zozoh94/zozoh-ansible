@@ -1,0 +1,14 @@
+mail_location = maildir:{{ mailserver_vmail_dir }}/%d/%n/mail
+maildir_stat_dirs=yes
+
+namespace inbox {
+    inbox = yes
+}
+
+mail_uid = {{ mailserver_vmail_uid }}
+mail_gid = {{ mailserver_vmail_gid }}
+
+first_valid_uid = {{ mailserver_vmail_uid }}
+last_valid_uid = {{ mailserver_vmail_uid }}
+
+mail_privileged_group = vmail

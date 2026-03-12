@@ -1,0 +1,76 @@
+---
+- name: Generate DH parameters (2048-bit)
+  ansible.builtin.command: openssl dhparam -out /etc/postfix/dh2048.pem 2048
+  args:
+    creates: /etc/postfix/dh2048.pem
+
+- name: Generate DH parameters (512-bit)
+  ansible.builtin.command: openssl dhparam -out /etc/postfix/dh512.pem 512
+  args:
+    creates: /etc/postfix/dh512.pem
+
+- name: Deploy Postfix main.cf
+  ansible.builtin.template:
+    src: postfix/main.cf.j2
+    dest: /etc/postfix/main.cf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+
+- name: Deploy Postfix master.cf
+  ansible.builtin.template:
+    src: postfix/master.cf.j2
+    dest: /etc/postfix/master.cf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart postfix
+
+- name: Deploy Postfix pgsql lookup maps
+  ansible.builtin.template:
+    src: "postfix/{{ item }}.j2"
+    dest: "/etc/postfix/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - pgsql-sender-login-maps.cf
+    - pgsql-virtual-mailbox-domains.cf
+    - pgsql-virtual-mailbox-maps.cf
+    - pgsql-virtual-alias-maps.cf
+    - pgsql-virtual-alias-domain-mailbox-maps.cf
+    - pgsql-virtual-alias-domain-catchall-maps.cf
+  notify: Restart postfix
+
+- name: Deploy Postfix header checks
+  ansible.builtin.template:
+    src: postfix/header_checks.j2
+    dest: /etc/postfix/header_checks
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Rebuild postfix header checks
+    - Restart postfix
+
+- name: Deploy Postfix virtual aliases
+  ansible.builtin.template:
+    src: postfix/virtual.j2
+    dest: /etc/postfix/virtual
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Rebuild postfix virtual map
+    - Restart postfix
+
+- name: Build virtual map
+  ansible.builtin.command: postmap /etc/postfix/virtual
+  changed_when: true
+
+- name: Ensure postfix user is in opendkim group
+  ansible.builtin.user:
+    name: postfix
+    groups: opendkim
+    append: true

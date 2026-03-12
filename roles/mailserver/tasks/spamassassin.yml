@@ -1,0 +1,22 @@
+---
+- name: Deploy SpamAssassin configuration
+  ansible.builtin.template:
+    src: spamassassin/local.cf.j2
+    dest: /etc/spamassassin/local.cf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart spamassassin
+
+- name: Configure SpamAssassin defaults
+  ansible.builtin.lineinfile:
+    path: /etc/default/spamassassin
+    regexp: "^OPTIONS="
+    line: 'OPTIONS="--create-prefs --max-children {{ mailserver_spamassassin_max_children }} --helper-home-dir"'
+  notify: Restart spamassassin
+
+- name: Configure SpamAssassin cron updates
+  ansible.builtin.lineinfile:
+    path: /etc/default/spamassassin
+    regexp: "^CRON="
+    line: "CRON={{ '1' if mailserver_spamassassin_cron_update else '0' }}"

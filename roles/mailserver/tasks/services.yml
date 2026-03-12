@@ -1,0 +1,36 @@
+---
+- name: Enable and start PostgreSQL
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Enable and start Postfix
+  ansible.builtin.service:
+    name: postfix
+    state: started
+    enabled: true
+
+- name: Enable and start Dovecot
+  ansible.builtin.service:
+    name: dovecot
+    state: started
+    enabled: true
+
+- name: Enable and start OpenDKIM
+  ansible.builtin.service:
+    name: opendkim
+    state: started
+    enabled: true
+
+- name: Enable and start OpenDMARC
+  ansible.builtin.service:
+    name: opendmarc
+    state: started
+    enabled: true
+
+- name: Enable and start SpamAssassin
+  ansible.builtin.service:
+    name: spamassassin
+    state: started
+    enabled: true

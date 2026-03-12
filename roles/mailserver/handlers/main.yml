@@ -1,0 +1,44 @@
+---
+- name: Restart postfix
+  ansible.builtin.service:
+    name: postfix
+    state: restarted
+
+- name: Reload postfix
+  ansible.builtin.service:
+    name: postfix
+    state: reloaded
+
+- name: Restart dovecot
+  ansible.builtin.service:
+    name: dovecot
+    state: restarted
+
+- name: Restart opendkim
+  ansible.builtin.service:
+    name: opendkim
+    state: restarted
+
+- name: Restart opendmarc
+  ansible.builtin.service:
+    name: opendmarc
+    state: restarted
+
+- name: Restart spamassassin
+  ansible.builtin.service:
+    name: spamassassin
+    state: restarted
+
+- name: Restart postgresql
+  ansible.builtin.service:
+    name: postgresql
+    state: restarted
+
+- name: Rebuild postfix virtual map
+  ansible.builtin.command: postmap /etc/postfix/virtual
+  changed_when: true
+
+- name: Rebuild postfix header checks
+  ansible.builtin.command: postmap -fq pcre:/etc/postfix/header_checks
+  changed_when: true
+  failed_when: false

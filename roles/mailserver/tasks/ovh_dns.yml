@@ -1,0 +1,44 @@
+---
+# OVH DNS automation - creates MX, SPF, DKIM, DMARC, and autoconfig records
+# Requires: pip install ovh (installed in packages.yml)
+
+- name: Detect server public IP if not set
+  ansible.builtin.uri:
+    url: https://api.ipify.org
+    return_content: true
+  register: public_ip_result
+  when: mailserver_public_ip == ""
+
+- name: Set public IP fact
+  ansible.builtin.set_fact:
+    _mailserver_public_ip: "{{ mailserver_public_ip if mailserver_public_ip != '' else public_ip_result.content }}"
+
+- name: Read DKIM public key files
+  ansible.builtin.slurp:
+    src: "{{ mailserver_dkim_key_dir }}/{{ item }}/{{ mailserver_dkim_selector }}.txt"
+  register: _dkim_keys
+  loop: "{{ mailserver_domains }}"
+
+- name: Create OVH DNS records for each domain
+  ansible.builtin.script:
+    cmd: ovh_dns.py
+    executable: python3
+  environment:
+    OVH_ENDPOINT: "{{ mailserver_ovh_endpoint }}"
+    OVH_APPLICATION_KEY: "{{ mailserver_ovh_application_key }}"
+    OVH_APPLICATION_SECRET: "{{ mailserver_ovh_application_secret }}"
+    OVH_CONSUMER_KEY: "{{ mailserver_ovh_consumer_key }}"
+    MAIL_HOSTNAME: "{{ mailserver_hostname }}"
+    MAIL_PUBLIC_IP: "{{ _mailserver_public_ip }}"
+    MAIL_DOMAINS: "{{ mailserver_domains | join(',') }}"
+    DKIM_SELECTOR: "{{ mailserver_dkim_selector }}"
+    DKIM_KEY_DIR: "{{ mailserver_dkim_key_dir }}"
+    DNS_SPF: "{{ mailserver_dns_spf }}"
+    DNS_DMARC: "{{ mailserver_dns_dmarc }}"
+    DNS_MX_PRIORITY: "{{ mailserver_dns_mx_priority }}"
+  register: ovh_dns_result
+  changed_when: "'CHANGED' in ovh_dns_result.stdout"
+
+- name: Show OVH DNS results
+  ansible.builtin.debug:
+    var: ovh_dns_result.stdout_lines

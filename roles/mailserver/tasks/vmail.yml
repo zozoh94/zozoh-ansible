@@ -1,0 +1,61 @@
+---
+- name: Create vmail group
+  ansible.builtin.group:
+    name: vmail
+    gid: "{{ mailserver_vmail_gid }}"
+    state: present
+
+- name: Create vmail user
+  ansible.builtin.user:
+    name: vmail
+    uid: "{{ mailserver_vmail_uid }}"
+    group: vmail
+    home: "{{ mailserver_vmail_home }}"
+    shell: /usr/sbin/nologin
+    create_home: true
+    system: true
+    state: present
+
+- name: Create vhosts directory
+  ansible.builtin.file:
+    path: "{{ mailserver_vmail_dir }}"
+    state: directory
+    owner: vmail
+    group: vmail
+    mode: "0770"
+
+- name: Create domain directories
+  ansible.builtin.file:
+    path: "{{ mailserver_vmail_dir }}/{{ item }}"
+    state: directory
+    owner: vmail
+    group: vmail
+    mode: "0770"
+  loop: "{{ mailserver_domains }}"
+
+- name: Create sieve directory
+  ansible.builtin.file:
+    path: "{{ mailserver_vmail_home }}/sieve"
+    state: directory
+    owner: vmail
+    group: vmail
+    mode: "0770"
+
+- name: Deploy default sieve script
+  ansible.builtin.copy:
+    dest: "{{ mailserver_vmail_home }}/sieve/default.sieve"
+    content: |
+      require ["fileinto"];
+
+      if header :contains "Subject" "*****SPAM*****" {
+        fileinto "Junk";
+      }
+    owner: vmail
+    group: vmail
+    mode: "0644"
+  notify: Restart dovecot
+
+- name: Compile default sieve script
+  ansible.builtin.command: sievec {{ mailserver_vmail_home }}/sieve/default.sieve
+  changed_when: true
+  failed_when: false

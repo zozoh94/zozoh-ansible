@@ -1,0 +1,41 @@
+---
+# ─── Main orchestration task file ───────────────────────────────────────────────
+
+- name: Install mail server packages
+  ansible.builtin.include_tasks: packages.yml
+
+- name: Configure PostgreSQL
+  ansible.builtin.include_tasks: postgres.yml
+
+- name: Provision TLS certificates
+  ansible.builtin.include_tasks: certbot.yml
+  when: mailserver_certbot_enabled
+
+- name: Configure vmail user and directories
+  ansible.builtin.include_tasks: vmail.yml
+
+- name: Configure Postfix
+  ansible.builtin.include_tasks: postfix.yml
+
+- name: Configure Dovecot
+  ansible.builtin.include_tasks: dovecot.yml
+
+- name: Configure OpenDKIM
+  ansible.builtin.include_tasks: opendkim.yml
+
+- name: Configure OpenDMARC
+  ansible.builtin.include_tasks: opendmarc.yml
+
+- name: Configure SpamAssassin
+  ansible.builtin.include_tasks: spamassassin.yml
+
+- name: Configure OVH DNS records
+  ansible.builtin.include_tasks: ovh_dns.yml
+  when: mailserver_ovh_dns_enabled
+
+- name: Enable and start all services
+  ansible.builtin.include_tasks: services.yml
+
+- name: Role mailserver played
+  ansible.builtin.set_fact:
+    role_mailserver_played: true

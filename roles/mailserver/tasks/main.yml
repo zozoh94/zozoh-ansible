@@ -1,0 +1,4 @@
+---
+- name: Include mailserver tasks
+  ansible.builtin.include_tasks: tasks.yml
+  when: not role_mailserver_played
