@@ -154,6 +154,23 @@ def main():
             dmarc_subdomain = f"_dmarc.{subdomain}"
         ensure_record(client, zone, dmarc_subdomain, "TXT", f'"{dmarc}"')
 
+        # _domainkey base TXT record
+        domainkey_subdomain = "_domainkey"
+        if subdomain:
+            domainkey_subdomain = f"_domainkey.{subdomain}"
+        admin_email = os.environ.get("ADMIN_EMAIL", f"postmaster@{domain}")
+        ensure_record(
+            client, zone, domainkey_subdomain, "TXT",
+            f'"o=-; r={admin_email}"',
+        )
+
+        # smtp/imap CNAME aliases
+        for alias in ("smtp", "imap"):
+            alias_subdomain = alias
+            if subdomain:
+                alias_subdomain = f"{alias}.{subdomain}"
+            ensure_record(client, zone, alias_subdomain, "CNAME", f"{hostname}.")
+
         # Autoconfig record (for Thunderbird and other clients)
         autoconfig_subdomain = "autoconfig"
         if subdomain:

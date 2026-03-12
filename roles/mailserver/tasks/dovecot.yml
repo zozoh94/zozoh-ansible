@@ -34,3 +34,15 @@
     - 90-sieve.conf
     - auth-sql.conf.ext
   notify: Restart dovecot
+
+- name: Set Dovecot directory permissions
+  ansible.builtin.file:
+    path: /etc/dovecot
+    state: directory
+    owner: vmail
+    group: dovecot
+    recurse: true
+
+- name: Remove world permissions on Dovecot config
+  ansible.builtin.command: chmod -R o-rwx /etc/dovecot
+  changed_when: false

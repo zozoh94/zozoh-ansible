@@ -36,6 +36,7 @@
     DNS_SPF: "{{ mailserver_dns_spf }}"
     DNS_DMARC: "{{ mailserver_dns_dmarc }}"
     DNS_MX_PRIORITY: "{{ mailserver_dns_mx_priority }}"
+    ADMIN_EMAIL: "{{ mailserver_admin_email }}"
   register: ovh_dns_result
   changed_when: "'CHANGED' in ovh_dns_result.stdout"
 

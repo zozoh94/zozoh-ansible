@@ -1,6 +1,9 @@
 ---
 # ─── Main orchestration task file ───────────────────────────────────────────────
 
+- name: Configure hostname and FQDN
+  ansible.builtin.include_tasks: hostname.yml
+
 - name: Install mail server packages
   ansible.builtin.include_tasks: packages.yml
 
