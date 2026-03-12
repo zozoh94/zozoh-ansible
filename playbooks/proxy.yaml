@@ -7,7 +7,7 @@
     sshd_listen: "{{ ansible_all_ipv4_addresses | ansible.netcommon.ipaddr(admin_network) | first }}"
     
   tasks:
-    - name: Add the user minio
+    - name: Add the user certbot
       ansible.builtin.user:
         name: certbot
     - name: Add the user nginx

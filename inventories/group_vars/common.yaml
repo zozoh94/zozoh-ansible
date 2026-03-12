@@ -10,6 +10,12 @@ certbot_certs:
       - gitlab.zozoh.fr
   - domains:
       - registry.zozoh.fr
+  - domains:
+      - pages.zozoh.fr
+      - enzo.pages.zozoh.fr
+  - domains:
+      - lagabelle-saint-hilaire.fr
+      - media.lagabelle-saint-hilaire.fr
 certbot_admin_email: "{{ admin_email }}"
 certbot_create_if_missing: true
 certbot_create_standalone_stop_services:
@@ -27,6 +33,12 @@ nginx_upstreams:
   - name: legacy
     servers:
       - "192.168.0.97:443"
+  - name: lagabelle-saint-hilaire
+    servers:
+      - "192.168.0.129:8000"
+  - name: lagabelle-saint-hilaire_media
+    servers:
+      - "192.168.0.129:8001"
 nginx_extra_http_options: |
   fastcgi_cache_path /var/cache/nginx_cgi levels=1:2 keys_zone=cgi:10m inactive=1h max_size=1g;
   
@@ -45,10 +57,13 @@ nginx_extra_conf_options: |
       
       gitlab.zozoh.fr 127.0.0.1:4443;
       registry.zozoh.fr 127.0.0.1:4443;
+      pages.zozoh.fr 127.0.0.1:4443;
+      enzo.pages.zozoh.fr 127.0.0.1:4443;
+      lagabelle-saint-hilaire.fr 127.0.0.1:4443;
+      media.lagabelle-saint-hilaire.fr 127.0.0.1:4443;
       
-      .cathosphere.co 192.168.0.97:443;
-      .urbvm.fr 192.168.0.97:443;
-      .lagabelle-saint-hilaire.fr 192.168.0.97:443;
+      autodiscover.lagabelle-saint-hilaire.fr 192.168.0.97:443;
+      autoconfig.lagabelle-saint-hilaire.fr 192.168.0.97:443;
       .zozoh.fr 192.168.0.97:443;
     }
   
@@ -114,6 +129,47 @@ nginx_vhosts:
       include /etc/nginx/ssl_options;
       ssl_dhparam /etc/nginx/ssl_dhparams.pem;
   - listen: "80"
+    server_name: "pages.zozoh.fr"
+    extra_parameters: |
+      return 301 https://pages.zozoh.fr$request_uri;
+  - listen: "80"
+    server_name: "enzo.pages.zozoh.fr"
+    extra_parameters: |
+      return 301 https://enzo.pages.zozoh.fr$request_uri;
+  - listen: "4443 ssl http2 proxy_protocol"
+    server_name: "pages.zozoh.fr enzo.pages.zozoh.fr"
+    access_log: "/var/log/nginx/pages.access.log"
+    error_log: "/var/log/nginx/pages.error.log"
+    state: "present"
+    extra_parameters: |
+      server_tokens off;
+      location / {
+        gzip                    off;
+        
+        proxy_read_timeout      300;
+        proxy_connect_timeout   300;
+        proxy_redirect          off;
+
+        proxy_set_header        Host                $http_host;
+        proxy_set_header        X-Real-IP           $remote_addr;
+        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
+        proxy_set_header        X-Forwarded-Proto   $scheme;
+        proxy_set_header        X-Frame-Options     SAMEORIGIN;
+
+        proxy_cache reverse;
+        proxy_cache_revalidate on;
+        proxy_cache_min_uses 1;
+        proxy_cache_use_stale error timeout updating http_500 http_502 http_503
+        http_504;
+        proxy_cache_lock on;
+
+        proxy_pass http://gitlab;
+      }
+      ssl_certificate /etc/letsencrypt/live/pages.zozoh.fr/fullchain.pem;
+      ssl_certificate_key /etc/letsencrypt/live/pages.zozoh.fr/privkey.pem;
+      include /etc/nginx/ssl_options;
+      ssl_dhparam /etc/nginx/ssl_dhparams.pem;
+  - listen: "80"
     server_name: "registry.zozoh.fr"
     extra_parameters: |
       return 301 https://registry.zozoh.fr$request_uri;
@@ -145,9 +201,83 @@ nginx_vhosts:
       ssl_certificate /etc/letsencrypt/live/registry.zozoh.fr/fullchain.pem;
       ssl_certificate_key /etc/letsencrypt/live/registry.zozoh.fr/privkey.pem;
       include /etc/nginx/ssl_options;
-      ssl_dhparam /etc/nginx/ssl_dhparams.pem;      
+      ssl_dhparam /etc/nginx/ssl_dhparams.pem;     
   - listen: "80"
-    server_name: "zozoh.fr cloud.zozoh.fr imap.zozoh.fr smtp.zozoh.fr collaboraonline.zozoh.fr postfix.zozoh.fr mail.zozoh.fr minio.cathosphere.co cathosphere.co ws.cathosphere.co api.cathosphere.co admin.cathosphere.co sign.cathosphere.co beta.cathosphere.co app.cathosphere.co ordo69.cathosphere.co ordo62.cathosphere.co gmaps.cathosphere.co urbvm.fr cloud.zozoh.fr collaboraonline.urbvm.fr www.urbvm.fr cloud.urbvm.fr lagabelle-saint-hilaire.fr media.lagabelle-saint-hilaire.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.urbvm.fr autodiscover.urbvm.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr autoconfig.cathosphere.co autodiscover.cathosphere.co api.eventcounter.zozoh.fr admin.eventcounter.zozoh.fr eventcounter.zozoh.fr mariage-jade-et-bastien.zozoh.fr"
+    server_name: "lagabelle-saint-hilaire.fr"
+    extra_parameters: |
+      return 301 https://lagabelle-saint-hilaire.fr$request_uri;
+  - listen: "4443 ssl http2 proxy_protocol"
+    server_name: "lagabelle-saint-hilaire.fr"
+    access_log: "/var/log/nginx/lagabelle-saint-hilaire.access.log"
+    error_log: "/var/log/nginx/lagabelle-saint-hilaire.error.log"
+    state: "present"
+    extra_parameters: |
+      server_tokens off;
+      location / {
+        gzip                    off;
+        
+        proxy_read_timeout      300;
+        proxy_connect_timeout   300;
+        proxy_redirect          off;
+
+        proxy_set_header        Host                $http_host;
+        proxy_set_header        X-Real-IP           $remote_addr;
+        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
+        proxy_set_header        X-Forwarded-Proto   $scheme;
+        proxy_set_header        X-Frame-Options     SAMEORIGIN;
+
+        proxy_cache reverse;
+        proxy_cache_revalidate on;
+        proxy_cache_min_uses 1;
+        proxy_cache_use_stale error timeout updating http_500 http_502 http_503
+        http_504;
+        proxy_cache_lock on;
+
+        proxy_pass http://lagabelle-saint-hilaire;
+      }
+      ssl_certificate /etc/letsencrypt/live/lagabelle-saint-hilaire.fr/fullchain.pem;
+      ssl_certificate_key /etc/letsencrypt/live/lagabelle-saint-hilaire.fr/privkey.pem;
+      include /etc/nginx/ssl_options;
+      ssl_dhparam /etc/nginx/ssl_dhparams.pem; 
+  - listen: "80"
+    server_name: "media.lagabelle-saint-hilaire.fr"
+    extra_parameters: |
+      return 301 https://media.lagabelle-saint-hilaire.fr$request_uri;
+  - listen: "4443 ssl http2 proxy_protocol"
+    server_name: "media.lagabelle-saint-hilaire.fr"
+    access_log: "/var/log/nginx/lagabelle-saint-hilaire.access.log"
+    error_log: "/var/log/nginx/lagabelle-saint-hilaire.error.log"
+    state: "present"
+    extra_parameters: |
+      server_tokens off;
+      location / {
+        gzip                    off;
+        
+        proxy_read_timeout      300;
+        proxy_connect_timeout   300;
+        proxy_redirect          off;
+
+        proxy_set_header        Host                $http_host;
+        proxy_set_header        X-Real-IP           $remote_addr;
+        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
+        proxy_set_header        X-Forwarded-Proto   $scheme;
+        proxy_set_header        X-Frame-Options     SAMEORIGIN;
+
+        proxy_cache reverse;
+        proxy_cache_revalidate on;
+        proxy_cache_min_uses 1;
+        proxy_cache_use_stale error timeout updating http_500 http_502 http_503
+        http_504;
+        proxy_cache_lock on;
+
+        proxy_pass http://lagabelle-saint-hilaire_media;
+      }
+      ssl_certificate /etc/letsencrypt/live/lagabelle-saint-hilaire.fr/fullchain.pem;
+      ssl_certificate_key /etc/letsencrypt/live/lagabelle-saint-hilaire.fr/privkey.pem;
+      include /etc/nginx/ssl_options;
+      ssl_dhparam /etc/nginx/ssl_dhparams.pem; 
+  - listen: "80"
+    server_name: "zozoh.fr imap.zozoh.fr smtp.zozoh.fr collaboraonline.zozoh.fr postfix.zozoh.fr mail.zozoh.fr cloud.zozoh.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr"
     extra_parameters: |
       location / {
         gzip                    off;
