@@ -1,0 +1,32 @@
+---
+- name: Create backup directory
+  ansible.builtin.file:
+    path: "{{ mailserver_backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Deploy PostgreSQL backup script
+  ansible.builtin.template:
+    src: backup/backup-mailserver.sh.j2
+    dest: /usr/local/sbin/backup-mailserver.sh
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Schedule daily mailserver backup
+  ansible.builtin.cron:
+    name: "mailserver backup"
+    minute: "30"
+    hour: "2"
+    job: "/usr/local/sbin/backup-mailserver.sh"
+    user: root
+
+- name: Prune old backups (keep last N days)
+  ansible.builtin.cron:
+    name: "mailserver backup cleanup"
+    minute: "0"
+    hour: "4"
+    job: "find {{ mailserver_backup_dir }} -type f -mtime +{{ mailserver_backup_retention_days }} -delete"
+    user: root

@@ -12,5 +12,13 @@
 /^\s*X-Originating-IP:/    IGNORE
 /^\s*X-Pgp-Agent:/         IGNORE
 
+# Remove headers that can leak internal infrastructure or client IPs
+/^\s*X-Forwarded-For:/     IGNORE
+/^\s*X-Forwarded-To:/      IGNORE
+/^\s*X-Real-IP:/           IGNORE
+/^\s*X-PHP-Originating-Script:/ IGNORE
+/^\s*X-Submitted-Via:/     IGNORE
+/^\s*X-Sender-IP:/         IGNORE
+
 # Strip user agent info from Mime-Version header
 /^\s*(Mime-Version:\s*[0-9\.]+)\s.+/  REPLACE $1

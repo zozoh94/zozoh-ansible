@@ -1,0 +1,22 @@
+---
+- name: Generate TLSA record for SMTP (port 25)
+  ansible.builtin.shell: |
+    openssl x509 -in {{ mailserver_tls_fullchain }} -noout -pubkey | \
+    openssl pkey -pubin -outform DER | \
+    openssl dgst -sha256 -binary | \
+    xxd -p -c 256
+  register: _mailserver_tlsa_hash
+  changed_when: false
+
+- name: Display TLSA record values
+  ansible.builtin.debug:
+    msg: >
+      Add the following TLSA DNS records for DANE:
+        _25._tcp.{{ mailserver_hostname }}. IN TLSA 3 1 1 {{ _mailserver_tlsa_hash.stdout }}
+        _465._tcp.{{ mailserver_hostname }}. IN TLSA 3 1 1 {{ _mailserver_tlsa_hash.stdout }}
+        _587._tcp.{{ mailserver_hostname }}. IN TLSA 3 1 1 {{ _mailserver_tlsa_hash.stdout }}
+        _993._tcp.{{ mailserver_hostname }}. IN TLSA 3 1 1 {{ _mailserver_tlsa_hash.stdout }}
+
+- name: Store TLSA hash as fact
+  ansible.builtin.set_fact:
+    mailserver_tlsa_hash: "{{ _mailserver_tlsa_hash.stdout }}"

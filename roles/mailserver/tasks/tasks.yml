@@ -35,12 +35,24 @@
 - name: Configure fail2ban
   ansible.builtin.include_tasks: fail2ban.yml
 
+- name: Configure backups
+  ansible.builtin.include_tasks: backup.yml
+  when: mailserver_backup_enabled
+
+- name: Generate DANE/TLSA records
+  ansible.builtin.include_tasks: dane_tlsa.yml
+  when: mailserver_dane_enabled
+
 - name: Configure OVH DNS records
   ansible.builtin.include_tasks: ovh_dns.yml
   when: mailserver_ovh_dns_enabled
 
 - name: Enable and start all services
   ansible.builtin.include_tasks: services.yml
+
+- name: Configure monitoring
+  ansible.builtin.include_tasks: monitoring.yml
+  when: mailserver_monitoring_enabled
 
 - name: Role mailserver played
   ansible.builtin.set_fact:

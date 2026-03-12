@@ -1,0 +1,87 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Mailserver health check — alerts admin on service failures
+set -euo pipefail
+
+ADMIN="{{ mailserver_admin_email }}"
+HOSTNAME="{{ mailserver_hostname }}"
+ALERT_FILE="/tmp/.mailserver-health-alert"
+ERRORS=""
+
+check_service() {
+  local svc="$1"
+  if ! systemctl is-active --quiet "$svc"; then
+    ERRORS="${ERRORS}  - ${svc} is DOWN\n"
+  fi
+}
+
+check_port() {
+  local port="$1" label="$2"
+  if ! timeout 5 bash -c "echo QUIT | openssl s_client -connect 127.0.0.1:${port} -quiet 2>/dev/null" &>/dev/null && \
+     ! timeout 5 bash -c "echo QUIT > /dev/tcp/127.0.0.1/${port}" 2>/dev/null; then
+    ERRORS="${ERRORS}  - Port ${port} (${label}) not responding\n"
+  fi
+}
+
+check_disk() {
+  local mount="$1" threshold="$2"
+  local usage
+  usage=$(df --output=pcent "$mount" 2>/dev/null | tail -1 | tr -d ' %')
+  if [ -n "$usage" ] && [ "$usage" -ge "$threshold" ]; then
+    ERRORS="${ERRORS}  - Disk ${mount} at ${usage}% (threshold: ${threshold}%)\n"
+  fi
+}
+
+check_queue() {
+  local count
+  count=$(find /var/spool/postfix/deferred -type f 2>/dev/null | wc -l)
+  if [ "$count" -ge 500 ]; then
+    ERRORS="${ERRORS}  - Postfix deferred queue has ${count} messages\n"
+  fi
+}
+
+check_cert() {
+  local cert="{{ mailserver_tls_cert }}"
+  if [ -f "$cert" ]; then
+    local expiry
+    expiry=$(openssl x509 -enddate -noout -in "$cert" 2>/dev/null | cut -d= -f2)
+    local expiry_epoch
+    expiry_epoch=$(date -d "$expiry" +%s 2>/dev/null || echo 0)
+    local now_epoch
+    now_epoch=$(date +%s)
+    local days_left=$(( (expiry_epoch - now_epoch) / 86400 ))
+    if [ "$days_left" -le 7 ]; then
+      ERRORS="${ERRORS}  - TLS certificate expires in ${days_left} days\n"
+    fi
+  fi
+}
+
+# Service checks
+for svc in postfix dovecot opendkim opendmarc spamassassin fail2ban; do
+  check_service "$svc"
+done
+
+# Port checks
+check_port 25 "SMTP"
+check_port 587 "Submission"
+check_port 993 "IMAPS"
+
+# Resource checks
+check_disk "/" 90
+check_disk "{{ mailserver_vmail_home }}" 85
+check_queue
+check_cert
+
+# Alert logic (only alert once until resolved)
+if [ -n "$ERRORS" ]; then
+  if [ ! -f "$ALERT_FILE" ]; then
+    echo -e "Mailserver health check FAILED on ${HOSTNAME}:\n\n${ERRORS}" | \
+      mail -s "[ALERT] ${HOSTNAME} mailserver issues" "$ADMIN" 2>/dev/null || true
+    touch "$ALERT_FILE"
+  fi
+  echo -e "[$(date)] ALERT:\n${ERRORS}"
+  exit 1
+else
+  rm -f "$ALERT_FILE"
+  exit 0
+fi

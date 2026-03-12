@@ -12,6 +12,7 @@ Environment variables:
 import os
 import sys
 import re
+import time
 
 try:
     import ovh
@@ -20,6 +21,33 @@ except ImportError:
     sys.exit(1)
 
 changed = False
+
+MAX_RETRIES = 3
+RETRY_BACKOFF = 2  # seconds, doubled each retry
+
+
+def api_call_with_retry(func, *args, **kwargs):
+    """Execute an OVH API call with exponential backoff retry."""
+    last_exception = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            return func(*args, **kwargs)
+        except ovh.exceptions.NetworkError as e:
+            last_exception = e
+            wait = RETRY_BACKOFF * (2 ** attempt)
+            print(f"  RETRY ({attempt + 1}/{MAX_RETRIES}): network error, waiting {wait}s...",
+                  file=sys.stderr)
+            time.sleep(wait)
+        except ovh.exceptions.APIError as e:
+            if "Too many requests" in str(e) or getattr(e, 'status', 0) == 429:
+                last_exception = e
+                wait = RETRY_BACKOFF * (2 ** attempt)
+                print(f"  RETRY ({attempt + 1}/{MAX_RETRIES}): rate limited, waiting {wait}s...",
+                      file=sys.stderr)
+                time.sleep(wait)
+            else:
+                raise
+    raise last_exception
 
 
 def get_client():
@@ -51,10 +79,10 @@ def find_existing_record(client, zone, subdomain, field_type, target=None):
     params = {"fieldType": field_type}
     if subdomain is not None:
         params["subDomain"] = subdomain
-    record_ids = client.get(f"/domain/zone/{zone}/record", **params)
+    record_ids = api_call_with_retry(client.get, f"/domain/zone/{zone}/record", **params)
     records = []
     for rid in record_ids:
-        record = client.get(f"/domain/zone/{zone}/record/{rid}")
+        record = api_call_with_retry(client.get, f"/domain/zone/{zone}/record/{rid}")
         if target is None or record["target"] == target:
             records.append(record)
     return records
@@ -75,7 +103,7 @@ def ensure_record(client, zone, subdomain, field_type, target, ttl=3600):
         "target": target,
         "ttl": ttl,
     }
-    client.post(f"/domain/zone/{zone}/record", **params)
+    api_call_with_retry(client.post, f"/domain/zone/{zone}/record", **params)
     print(f"  CREATED: {field_type} {subdomain}.{zone} -> {target[:60]}...")
     changed = True
 
@@ -89,7 +117,8 @@ def ensure_mx_record(client, zone, subdomain, target, priority):
         if target in rec["target"]:
             print(f"  OK: MX {subdomain or '@'}.{zone} -> {rec['target']}")
             return
-    client.post(
+    api_call_with_retry(
+        client.post,
         f"/domain/zone/{zone}/record",
         fieldType="MX",
         subDomain=subdomain,
@@ -123,68 +152,96 @@ def main():
     spf = os.environ["DNS_SPF"]
     dmarc = os.environ["DNS_DMARC"]
     mx_priority = int(os.environ["DNS_MX_PRIORITY"])
+    tlsa_hash = os.environ.get("TLSA_HASH", "")
+
+    errors = []
 
     for domain in domains:
         zone = get_zone_name(domain)
         subdomain = get_subdomain(domain, zone)
         print(f"\n=== Configuring DNS for {domain} (zone: {zone}) ===")
 
-        # A record for mail hostname (only for the primary domain)
-        mail_sub = get_subdomain(hostname, zone)
-        if mail_sub:
-            ensure_record(client, zone, mail_sub, "A", public_ip)
+        try:
+            # A record for mail hostname (only for the primary domain)
+            mail_sub = get_subdomain(hostname, zone)
+            if mail_sub:
+                ensure_record(client, zone, mail_sub, "A", public_ip)
 
-        # MX record
-        ensure_mx_record(client, zone, subdomain, hostname, mx_priority)
+            # MX record
+            ensure_mx_record(client, zone, subdomain, hostname, mx_priority)
 
-        # SPF record
-        ensure_record(client, zone, subdomain, "TXT", f'"{spf}"')
+            # SPF record
+            ensure_record(client, zone, subdomain, "TXT", f'"{spf}"')
 
-        # DKIM record
-        dkim_value = read_dkim_public_key(domain, selector, key_dir)
-        if dkim_value:
-            dkim_subdomain = f"{selector}._domainkey"
+            # DKIM record
+            dkim_value = read_dkim_public_key(domain, selector, key_dir)
+            if dkim_value:
+                dkim_subdomain = f"{selector}._domainkey"
+                if subdomain:
+                    dkim_subdomain = f"{dkim_subdomain}.{subdomain}"
+                ensure_record(client, zone, dkim_subdomain, "TXT", f'"{dkim_value}"')
+
+            # DMARC record
+            dmarc_subdomain = "_dmarc"
             if subdomain:
-                dkim_subdomain = f"{dkim_subdomain}.{subdomain}"
-            ensure_record(client, zone, dkim_subdomain, "TXT", f'"{dkim_value}"')
+                dmarc_subdomain = f"_dmarc.{subdomain}"
+            ensure_record(client, zone, dmarc_subdomain, "TXT", f'"{dmarc}"')
 
-        # DMARC record
-        dmarc_subdomain = "_dmarc"
-        if subdomain:
-            dmarc_subdomain = f"_dmarc.{subdomain}"
-        ensure_record(client, zone, dmarc_subdomain, "TXT", f'"{dmarc}"')
-
-        # _domainkey base TXT record
-        domainkey_subdomain = "_domainkey"
-        if subdomain:
-            domainkey_subdomain = f"_domainkey.{subdomain}"
-        admin_email = os.environ.get("ADMIN_EMAIL", f"postmaster@{domain}")
-        ensure_record(
-            client, zone, domainkey_subdomain, "TXT",
-            f'"o=-; r={admin_email}"',
-        )
-
-        # smtp/imap CNAME aliases
-        for alias in ("smtp", "imap"):
-            alias_subdomain = alias
+            # _domainkey base TXT record
+            domainkey_subdomain = "_domainkey"
             if subdomain:
-                alias_subdomain = f"{alias}.{subdomain}"
-            ensure_record(client, zone, alias_subdomain, "CNAME", f"{hostname}.")
+                domainkey_subdomain = f"_domainkey.{subdomain}"
+            admin_email = os.environ.get("ADMIN_EMAIL", f"postmaster@{domain}")
+            ensure_record(
+                client, zone, domainkey_subdomain, "TXT",
+                f'"o=-; r={admin_email}"',
+            )
 
-        # Autoconfig record (for Thunderbird and other clients)
-        autoconfig_subdomain = "autoconfig"
-        if subdomain:
-            autoconfig_subdomain = f"autoconfig.{subdomain}"
-        ensure_record(client, zone, autoconfig_subdomain, "CNAME", f"{hostname}.")
+            # smtp/imap CNAME aliases
+            for alias in ("smtp", "imap"):
+                alias_subdomain = alias
+                if subdomain:
+                    alias_subdomain = f"{alias}.{subdomain}"
+                ensure_record(client, zone, alias_subdomain, "CNAME", f"{hostname}.")
 
-    # Refresh the DNS zone
+            # Autoconfig record (for Thunderbird and other clients)
+            autoconfig_subdomain = "autoconfig"
+            if subdomain:
+                autoconfig_subdomain = f"autoconfig.{subdomain}"
+            ensure_record(client, zone, autoconfig_subdomain, "CNAME", f"{hostname}.")
+
+            # TLSA records for DANE (if hash provided)
+            if tlsa_hash:
+                mail_sub = get_subdomain(hostname, zone)
+                for port in (25, 465, 587, 993):
+                    tlsa_subdomain = f"_{port}._tcp.{mail_sub}" if mail_sub else f"_{port}._tcp"
+                    tlsa_value = f"3 1 1 {tlsa_hash}"
+                    ensure_record(client, zone, tlsa_subdomain, "TLSA", tlsa_value)
+
+        except Exception as e:
+            msg = f"ERROR processing {domain}: {e}"
+            print(f"  {msg}", file=sys.stderr)
+            errors.append(msg)
+            continue
+
+    # Refresh the DNS zones
+    refreshed_zones = set()
     for domain in domains:
         zone = get_zone_name(domain)
+        if zone in refreshed_zones:
+            continue
         try:
-            client.post(f"/domain/zone/{zone}/refresh")
+            api_call_with_retry(client.post, f"/domain/zone/{zone}/refresh")
             print(f"\nRefreshed DNS zone: {zone}")
+            refreshed_zones.add(zone)
         except Exception as e:
             print(f"  WARN: Could not refresh zone {zone}: {e}", file=sys.stderr)
+
+    if errors:
+        print(f"\nFAILED: {len(errors)} domain(s) had errors:", file=sys.stderr)
+        for err in errors:
+            print(f"  - {err}", file=sys.stderr)
+        sys.exit(1)
 
     if changed:
         print("\nCHANGED")

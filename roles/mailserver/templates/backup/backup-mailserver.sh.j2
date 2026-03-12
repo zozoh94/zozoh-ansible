@@ -1,0 +1,27 @@
+#!/bin/bash
+# {{ ansible_managed }}
+# Daily mailserver backup: PostgreSQL dump + DKIM keys
+set -euo pipefail
+
+BACKUP_DIR="{{ mailserver_backup_dir }}"
+DATE="$(date +%Y%m%d-%H%M%S)"
+DB_NAME="{{ mailserver_db_name }}"
+
+echo "[$(date)] Starting mailserver backup..."
+
+# PostgreSQL dump
+sudo -u postgres pg_dump --format=custom "${DB_NAME}" \
+  > "${BACKUP_DIR}/pg_${DB_NAME}_${DATE}.dump"
+
+# DKIM keys
+tar czf "${BACKUP_DIR}/dkim_keys_${DATE}.tar.gz" \
+  -C / "{{ mailserver_dkim_key_dir | regex_replace('^/', '') }}" 2>/dev/null || true
+
+# Dovecot sieve filters (if any)
+if [ -d "{{ mailserver_vmail_dir }}" ]; then
+  find "{{ mailserver_vmail_dir }}" -name "*.sieve" -o -name "*.svbin" | head -1 | \
+    grep -q . && tar czf "${BACKUP_DIR}/sieve_${DATE}.tar.gz" \
+    $(find "{{ mailserver_vmail_dir }}" -name "*.sieve" -o -name "*.svbin") 2>/dev/null || true
+fi
+
+echo "[$(date)] Backup completed: ${BACKUP_DIR}/*_${DATE}.*"

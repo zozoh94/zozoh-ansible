@@ -102,5 +102,16 @@ mailserver_fail2ban_maxretry: 5
 mailserver_fail2ban_findtime: 600
 mailserver_fail2ban_bantime: 3600
 
+# ─── Backups ───────────────────────────────────────────────────────────────────
+mailserver_backup_enabled: true
+mailserver_backup_dir: /var/backups/mailserver
+mailserver_backup_retention_days: 30
+
+# ─── DANE / TLSA ──────────────────────────────────────────────────────────────
+mailserver_dane_enabled: false
+
+# ─── Monitoring ───────────────────────────────────────────────────────────────
+mailserver_monitoring_enabled: true
+
 # ─── Additional submission port ────────────────────────────────────────────────
 mailserver_extra_submission_port: 2525

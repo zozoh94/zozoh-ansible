@@ -100,6 +100,34 @@ For each domain, the role creates:
 | `mail._domainkey.domain.tld` | TXT | DKIM public key |
 | `_dmarc.domain.tld` | TXT | DMARC policy |
 | `autoconfig.domain.tld` | CNAME | `mail.domain.tld.` |
+| `smtp.domain.tld` | CNAME | `mail.domain.tld.` |
+| `imap.domain.tld` | CNAME | `mail.domain.tld.` |
+
+### PTR (Reverse DNS) Record — MANUAL SETUP REQUIRED
+
+A PTR record is **critical** for mail deliverability. Most receiving mail servers will reject or spam-flag email from IPs without a valid PTR record. This cannot be automated via the OVH DNS API — it must be set in the **OVH server/VPS control panel**.
+
+1. Log in to the [OVH Manager](https://www.ovh.com/manager/)
+2. Navigate to **Bare Metal Cloud** → **Virtual Private Servers** (or **Dedicated Servers**)
+3. Select your server
+4. Go to **IP** tab → Click the **⋮** menu next to your IP → **Modify reverse DNS**
+5. Set the reverse DNS to: `mail.yourdomain.tld`
+
+Verify with:
+```bash
+dig -x YOUR_SERVER_IP +short
+# Should return: mail.yourdomain.tld.
+```
+
+### DANE/TLSA Records (Optional)
+
+Enable DANE for authenticated TLS by setting `mailserver_dane_enabled: true`. The role generates TLSA records and can publish them to OVH DNS. DANE requires DNSSEC to be enabled on your domain.
+
+Verify with:
+```bash
+dig TLSA _25._tcp.mail.yourdomain.tld +short
+# Should return: 3 1 1 <hash>
+```
 
 ## Ports
 
@@ -124,6 +152,33 @@ For each domain, the role creates:
     - common
     - mailserver
 ```
+
+## Backups
+
+Enabled by default (`mailserver_backup_enabled: true`). A daily cron job at 02:30 performs:
+
+- **PostgreSQL dump** of the mail database (custom format for `pg_restore`)
+- **DKIM keys** archive
+- **Sieve filters** archive (if any)
+
+Backups are stored in `{{ mailserver_backup_dir }}` (default: `/var/backups/mailserver`) and pruned after `{{ mailserver_backup_retention_days }}` days (default: 30).
+
+To restore a database backup:
+```bash
+sudo -u postgres pg_restore --clean --dbname=postfix /var/backups/mailserver/pg_postfix_YYYYMMDD-HHMMSS.dump
+```
+
+## Monitoring
+
+Enabled by default (`mailserver_monitoring_enabled: true`). A cron job runs every 5 minutes and checks:
+
+- All mail services are running (postfix, dovecot, opendkim, opendmarc, spamassassin, fail2ban)
+- Critical ports are responding (25, 587, 993)
+- Disk usage thresholds (/ at 90%, mail storage at 85%)
+- Postfix deferred queue size (alerts above 500 messages)
+- TLS certificate expiry (alerts when ≤ 7 days remain)
+
+Alerts are emailed to `{{ mailserver_admin_email }}` (only once per incident, until resolved).
 
 ## Inventory Example
 

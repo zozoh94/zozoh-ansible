@@ -1,0 +1,15 @@
+---
+- name: Deploy mailserver health check script
+  ansible.builtin.template:
+    src: monitoring/mailserver-health.sh.j2
+    dest: /usr/local/sbin/mailserver-health.sh
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Schedule health check (every 5 minutes)
+  ansible.builtin.cron:
+    name: "mailserver health check"
+    minute: "*/5"
+    job: "/usr/local/sbin/mailserver-health.sh"
+    user: root
