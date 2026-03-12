@@ -92,5 +92,15 @@ mailserver_public_ip: ""
 # ─── Password hashing ──────────────────────────────────────────────────────────
 mailserver_password_scheme: "BLF-CRYPT"
 
+# ─── Rate limiting ──────────────────────────────────────────────────────────────
+mailserver_rate_limit_connections: 10
+mailserver_rate_limit_concurrent: 20
+mailserver_rate_limit_recipients: 100
+
+# ─── Fail2ban ──────────────────────────────────────────────────────────────────
+mailserver_fail2ban_maxretry: 5
+mailserver_fail2ban_findtime: 600
+mailserver_fail2ban_bantime: 3600
+
 # ─── Additional submission port ────────────────────────────────────────────────
 mailserver_extra_submission_port: 2525

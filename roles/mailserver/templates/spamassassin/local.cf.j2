@@ -5,17 +5,28 @@
 rewrite_header Subject *****SPAM*****
 
 # Set the threshold at which a message is considered spam
-required_score 5.0
-
-# Use Bayesian classifier
-use_bayes 1
-
-# Bayesian classifier auto-learning
-bayes_auto_learn 1
+required_score 6.0
 
 # Report safe mode (0: modify original, 1: attach as MIME, 2: text/plain)
 report_safe 0
 
+# ─── Bayesian classifier ────────────────────────────────────────────────────────
+use_bayes 1
+bayes_auto_learn 1
+bayes_auto_learn_threshold_spam 12.0
+bayes_auto_learn_threshold_nonspam 0.1
+
+# ─── DNS blacklists ─────────────────────────────────────────────────────────────
+skip_rbl_checks 0
+dns_query_restriction allow zen.spamhaus.org
+dns_query_restriction allow bl.spamcop.net
+dns_query_restriction allow b.barracudacentral.org
+
+# ─── Trusted networks ───────────────────────────────────────────────────────────
+trusted_networks 127.0.0.1 ::1
+internal_networks 127.0.0.1 ::1
+
+# ─── Shortcircuit ────────────────────────────────────────────────────────────────
 ifplugin Mail::SpamAssassin::Plugin::Shortcircuit
   shortcircuit USER_IN_WHITELIST       on
   shortcircuit USER_IN_DEF_WHITELIST   on
@@ -25,4 +36,19 @@ ifplugin Mail::SpamAssassin::Plugin::Shortcircuit
   shortcircuit USER_IN_BLACKLIST_TO    on
   shortcircuit SUBJECT_IN_BLACKLIST    on
   shortcircuit ALL_TRUSTED             on
+  shortcircuit BAYES_99                spam
+  shortcircuit BAYES_00                ham
+endif
+
+# ─── SPF / DKIM checks ──────────────────────────────────────────────────────────
+ifplugin Mail::SpamAssassin::Plugin::SPF
+  score SPF_FAIL 5.0
+  score SPF_HELO_FAIL 5.0
+  score SPF_PASS -1.0
+endif
+
+ifplugin Mail::SpamAssassin::Plugin::DKIM
+  score DKIM_SIGNED -1.0
+  score DKIM_VALID -1.0
+  score DKIM_VALID_AU -1.0
 endif

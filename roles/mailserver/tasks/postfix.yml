@@ -1,13 +1,8 @@
 ---
-- name: Generate DH parameters (2048-bit)
-  ansible.builtin.command: openssl dhparam -out /etc/postfix/dh2048.pem 2048
+- name: Generate DH parameters (4096-bit)
+  ansible.builtin.command: openssl dhparam -out /etc/postfix/dh4096.pem 4096
   args:
-    creates: /etc/postfix/dh2048.pem
-
-- name: Generate DH parameters (512-bit)
-  ansible.builtin.command: openssl dhparam -out /etc/postfix/dh512.pem 512
-  args:
-    creates: /etc/postfix/dh512.pem
+    creates: /etc/postfix/dh4096.pem
 
 - name: Deploy Postfix main.cf
   ansible.builtin.template:
@@ -32,8 +27,8 @@
     src: "postfix/{{ item }}.j2"
     dest: "/etc/postfix/{{ item }}"
     owner: root
-    group: root
-    mode: "0644"
+    group: postfix
+    mode: "0640"
   loop:
     - pgsql-sender-login-maps.cf
     - pgsql-virtual-mailbox-domains.cf

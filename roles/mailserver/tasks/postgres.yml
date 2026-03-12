@@ -126,6 +126,13 @@
       ON CONFLICT (domain) DO NOTHING;
   loop: "{{ mailserver_domains }}"
 
+- name: Hash mailbox passwords with doveadm
+  ansible.builtin.command: doveadm pw -s {{ mailserver_password_scheme }} -p "{{ item.password }}"
+  register: _mailserver_hashed_passwords
+  loop: "{{ mailserver_mailboxes }}"
+  changed_when: false
+  no_log: true
+
 - name: Create mailboxes
   become: true
   become_user: postgres
@@ -134,19 +141,19 @@
     query: >
       INSERT INTO mailbox (username, password, name, maildir, domain, local_part, active)
       VALUES (
-        '{{ item.username }}',
-        '{{ item.password }}',
-        '{{ item.name | default("") }}',
-        '{{ item.username.split("@")[1] }}/{{ item.username.split("@")[0] }}/',
-        '{{ item.username.split("@")[1] }}',
-        '{{ item.username.split("@")[0] }}',
+        '{{ item.item.username }}',
+        '{{ item.stdout }}',
+        '{{ item.item.name | default("") }}',
+        '{{ item.item.username.split("@")[1] }}/{{ item.item.username.split("@")[0] }}/',
+        '{{ item.item.username.split("@")[1] }}',
+        '{{ item.item.username.split("@")[0] }}',
         TRUE
       )
       ON CONFLICT (username) DO UPDATE SET
         password = EXCLUDED.password,
         name = EXCLUDED.name,
         modified = NOW();
-  loop: "{{ mailserver_mailboxes }}"
+  loop: "{{ _mailserver_hashed_passwords.results }}"
   no_log: true
 
 - name: Create aliases

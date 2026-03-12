@@ -1,0 +1,25 @@
+# {{ ansible_managed }}
+
+[postfix-sasl]
+enabled  = true
+port     = smtp,submission,smtps,{{ mailserver_extra_submission_port | default(2525) }}
+logpath  = /var/log/mail.log
+maxretry = {{ mailserver_fail2ban_maxretry }}
+findtime = {{ mailserver_fail2ban_findtime }}
+bantime  = {{ mailserver_fail2ban_bantime }}
+
+[postfix]
+enabled  = true
+port     = smtp,submission,smtps,{{ mailserver_extra_submission_port | default(2525) }}
+logpath  = /var/log/mail.log
+maxretry = {{ mailserver_fail2ban_maxretry }}
+findtime = {{ mailserver_fail2ban_findtime }}
+bantime  = {{ mailserver_fail2ban_bantime }}
+
+[dovecot]
+enabled  = true
+port     = imap,imaps,pop3,pop3s
+logpath  = /var/log/mail.log
+maxretry = {{ mailserver_fail2ban_maxretry }}
+findtime = {{ mailserver_fail2ban_findtime }}
+bantime  = {{ mailserver_fail2ban_bantime }}

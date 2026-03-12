@@ -32,6 +32,9 @@
 - name: Configure SpamAssassin
   ansible.builtin.include_tasks: spamassassin.yml
 
+- name: Configure fail2ban
+  ansible.builtin.include_tasks: fail2ban.yml
+
 - name: Configure OVH DNS records
   ansible.builtin.include_tasks: ovh_dns.yml
   when: mailserver_ovh_dns_enabled

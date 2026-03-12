@@ -10,6 +10,8 @@ service imap-login {
   }
 
   service_count = 0
+  process_min_avail = 2
+  process_limit = 256
 
 }
 
@@ -30,7 +32,7 @@ service lmtp {
 service auth {
 
   unix_listener /var/spool/postfix/private/auth {
-      mode = 0666
+      mode = 0660
       user = postfix
       group = postfix
   }
@@ -61,6 +63,8 @@ service pop3-login {
     port = 995
     ssl = yes
   }
+
+  process_limit = 128
 
 }
 

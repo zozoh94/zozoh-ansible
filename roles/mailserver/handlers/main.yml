@@ -34,6 +34,11 @@
     name: postgresql
     state: restarted
 
+- name: Restart fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    state: restarted
+
 - name: Rebuild postfix virtual map
   ansible.builtin.command: postmap /etc/postfix/virtual
   changed_when: true
