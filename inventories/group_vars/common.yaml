@@ -21,6 +21,26 @@ certbot_create_if_missing: true
 certbot_create_standalone_stop_services:
   - nginx
 
+_nginx_proxy_headers: |
+  proxy_set_header        Host                $http_host;
+  proxy_set_header        X-Real-IP           $remote_addr;
+  proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
+  proxy_set_header        X-Forwarded-Proto   $scheme;
+  proxy_set_header        X-Frame-Options     SAMEORIGIN;
+
+_nginx_proxy_timeouts: |
+  proxy_read_timeout      300;
+  proxy_connect_timeout   300;
+  proxy_redirect          off;
+
+_nginx_proxy_cache: |
+  proxy_cache reverse;
+  proxy_cache_revalidate on;
+  proxy_cache_min_uses 1;
+  proxy_cache_use_stale error timeout updating http_500 http_502 http_503
+  http_504;
+  proxy_cache_lock on;
+
 nginx_package_name: "nginx-extras"
 nginx_listen_ipv6: false
 nginx_upstreams:
@@ -83,20 +103,18 @@ nginx_vhosts:
       location / {
         gzip                    off;
 
-        proxy_set_header        Host                $http_host;
-        proxy_set_header        X-Real-IP           $remote_addr;
-        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   $scheme;
-        proxy_set_header        X-Frame-Options     SAMEORIGIN;
-        
+        {{ _nginx_proxy_headers | indent(8) }}
+
         proxy_pass http://192.168.0.254;
       }
   - listen: "80"
     server_name: "gitlab.zozoh.fr"
+    filename: "gitlab.zozoh.fr-80.conf"
     extra_parameters: |
       return 301 https://gitlab.zozoh.fr$request_uri;
   - listen: "4443 ssl http2 proxy_protocol"
     server_name: "gitlab.zozoh.fr"
+    filename: "gitlab.zozoh.fr-443.conf"
     access_log: "/var/log/nginx/gitlab.access.log"
     error_log: "/var/log/nginx/gitlab.error.log"
     state: "present"
@@ -104,23 +122,12 @@ nginx_vhosts:
       server_tokens off;
       location / {
         gzip                    off;
-        
-        proxy_read_timeout      300;
-        proxy_connect_timeout   300;
-        proxy_redirect          off;
 
-        proxy_set_header        Host                $http_host;
-        proxy_set_header        X-Real-IP           $remote_addr;
-        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   $scheme;
-        proxy_set_header        X-Frame-Options     SAMEORIGIN;
+        {{ _nginx_proxy_timeouts | indent(8) }}
 
-        proxy_cache reverse;
-        proxy_cache_revalidate on;
-        proxy_cache_min_uses 1;
-        proxy_cache_use_stale error timeout updating http_500 http_502 http_503
-        http_504;
-        proxy_cache_lock on;
+        {{ _nginx_proxy_headers | indent(8) }}
+
+        {{ _nginx_proxy_cache | indent(8) }}
 
         proxy_pass http://gitlab;
       }
@@ -130,14 +137,17 @@ nginx_vhosts:
       ssl_dhparam /etc/nginx/ssl_dhparams.pem;
   - listen: "80"
     server_name: "pages.zozoh.fr"
+    filename: "pages.zozoh.fr-80.conf"
     extra_parameters: |
       return 301 https://pages.zozoh.fr$request_uri;
   - listen: "80"
     server_name: "enzo.pages.zozoh.fr"
+    filename: "enzo.pages.zozoh.fr-80.conf"
     extra_parameters: |
       return 301 https://enzo.pages.zozoh.fr$request_uri;
   - listen: "4443 ssl http2 proxy_protocol"
     server_name: "pages.zozoh.fr enzo.pages.zozoh.fr"
+    filename: "pages.zozoh.fr-443.conf"
     access_log: "/var/log/nginx/pages.access.log"
     error_log: "/var/log/nginx/pages.error.log"
     state: "present"
@@ -145,23 +155,12 @@ nginx_vhosts:
       server_tokens off;
       location / {
         gzip                    off;
-        
-        proxy_read_timeout      300;
-        proxy_connect_timeout   300;
-        proxy_redirect          off;
 
-        proxy_set_header        Host                $http_host;
-        proxy_set_header        X-Real-IP           $remote_addr;
-        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   $scheme;
-        proxy_set_header        X-Frame-Options     SAMEORIGIN;
+        {{ _nginx_proxy_timeouts | indent(8) }}
 
-        proxy_cache reverse;
-        proxy_cache_revalidate on;
-        proxy_cache_min_uses 1;
-        proxy_cache_use_stale error timeout updating http_500 http_502 http_503
-        http_504;
-        proxy_cache_lock on;
+        {{ _nginx_proxy_headers | indent(8) }}
+
+        {{ _nginx_proxy_cache | indent(8) }}
 
         proxy_pass http://gitlab;
       }
@@ -171,10 +170,12 @@ nginx_vhosts:
       ssl_dhparam /etc/nginx/ssl_dhparams.pem;
   - listen: "80"
     server_name: "registry.zozoh.fr"
+    filename: "registry.zozoh.fr-80.conf"
     extra_parameters: |
       return 301 https://registry.zozoh.fr$request_uri;
   - listen: "4443 ssl http2 proxy_protocol"
     server_name: "registry.zozoh.fr"
+    filename: "registry.zozoh.fr-443.conf"
     access_log: "/var/log/nginx/registry.access.log"
     error_log: "/var/log/nginx/registry.error.log"
     state: "present"
@@ -190,11 +191,7 @@ nginx_vhosts:
 
         add_header 'Docker-Distribution-Api-Version' $docker_distribution_api_version always;
 
-        proxy_set_header        Host                $http_host;
-        proxy_set_header        X-Real-IP           $remote_addr;
-        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   $scheme;
-        proxy_set_header        X-Frame-Options     SAMEORIGIN;
+        {{ _nginx_proxy_headers | indent(8) }}
 
         proxy_pass http://gitlab_registry;
       }
@@ -204,10 +201,12 @@ nginx_vhosts:
       ssl_dhparam /etc/nginx/ssl_dhparams.pem;     
   - listen: "80"
     server_name: "lagabelle-saint-hilaire.fr"
+    filename: "lagabelle-saint-hilaire.fr-80.conf"
     extra_parameters: |
       return 301 https://lagabelle-saint-hilaire.fr$request_uri;
   - listen: "4443 ssl http2 proxy_protocol"
     server_name: "lagabelle-saint-hilaire.fr"
+    filename: "lagabelle-saint-hilaire.fr-443.conf"
     access_log: "/var/log/nginx/lagabelle-saint-hilaire.access.log"
     error_log: "/var/log/nginx/lagabelle-saint-hilaire.error.log"
     state: "present"
@@ -215,36 +214,27 @@ nginx_vhosts:
       server_tokens off;
       location / {
         gzip                    off;
-        
-        proxy_read_timeout      300;
-        proxy_connect_timeout   300;
-        proxy_redirect          off;
 
-        proxy_set_header        Host                $http_host;
-        proxy_set_header        X-Real-IP           $remote_addr;
-        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   $scheme;
-        proxy_set_header        X-Frame-Options     SAMEORIGIN;
+        {{ _nginx_proxy_timeouts | indent(8) }}
 
-        proxy_cache reverse;
-        proxy_cache_revalidate on;
-        proxy_cache_min_uses 1;
-        proxy_cache_use_stale error timeout updating http_500 http_502 http_503
-        http_504;
-        proxy_cache_lock on;
+        {{ _nginx_proxy_headers | indent(8) }}
+
+        {{ _nginx_proxy_cache | indent(8) }}
 
         proxy_pass http://lagabelle-saint-hilaire;
       }
       ssl_certificate /etc/letsencrypt/live/lagabelle-saint-hilaire.fr/fullchain.pem;
       ssl_certificate_key /etc/letsencrypt/live/lagabelle-saint-hilaire.fr/privkey.pem;
       include /etc/nginx/ssl_options;
-      ssl_dhparam /etc/nginx/ssl_dhparams.pem; 
+      ssl_dhparam /etc/nginx/ssl_dhparams.pem;
   - listen: "80"
     server_name: "media.lagabelle-saint-hilaire.fr"
+    filename: "media.lagabelle-saint-hilaire.fr-80.conf"
     extra_parameters: |
       return 301 https://media.lagabelle-saint-hilaire.fr$request_uri;
   - listen: "4443 ssl http2 proxy_protocol"
     server_name: "media.lagabelle-saint-hilaire.fr"
+    filename: "media.lagabelle-saint-hilaire.fr-443.conf"
     access_log: "/var/log/nginx/lagabelle-saint-hilaire.access.log"
     error_log: "/var/log/nginx/lagabelle-saint-hilaire.error.log"
     state: "present"
@@ -252,41 +242,26 @@ nginx_vhosts:
       server_tokens off;
       location / {
         gzip                    off;
-        
-        proxy_read_timeout      300;
-        proxy_connect_timeout   300;
-        proxy_redirect          off;
 
-        proxy_set_header        Host                $http_host;
-        proxy_set_header        X-Real-IP           $remote_addr;
-        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   $scheme;
-        proxy_set_header        X-Frame-Options     SAMEORIGIN;
+        {{ _nginx_proxy_timeouts | indent(8) }}
 
-        proxy_cache reverse;
-        proxy_cache_revalidate on;
-        proxy_cache_min_uses 1;
-        proxy_cache_use_stale error timeout updating http_500 http_502 http_503
-        http_504;
-        proxy_cache_lock on;
+        {{ _nginx_proxy_headers | indent(8) }}
+
+        {{ _nginx_proxy_cache | indent(8) }}
 
         proxy_pass http://lagabelle-saint-hilaire_media;
       }
       ssl_certificate /etc/letsencrypt/live/lagabelle-saint-hilaire.fr/fullchain.pem;
       ssl_certificate_key /etc/letsencrypt/live/lagabelle-saint-hilaire.fr/privkey.pem;
       include /etc/nginx/ssl_options;
-      ssl_dhparam /etc/nginx/ssl_dhparams.pem; 
+      ssl_dhparam /etc/nginx/ssl_dhparams.pem;
   - listen: "80"
     server_name: "zozoh.fr imap.zozoh.fr smtp.zozoh.fr collaboraonline.zozoh.fr postfix.zozoh.fr mail.zozoh.fr cloud.zozoh.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr"
     extra_parameters: |
       location / {
         gzip                    off;
 
-        proxy_set_header        Host                $http_host;
-        proxy_set_header        X-Real-IP           $remote_addr;
-        proxy_set_header        X-Forwarded-For     $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto   $scheme;
-        proxy_set_header        X-Frame-Options     SAMEORIGIN;
-        
+        {{ _nginx_proxy_headers | indent(8) }}
+
         proxy_pass http://192.168.0.97;
-      }      
+      }
