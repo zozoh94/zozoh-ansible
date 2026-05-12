@@ -1,0 +1,4 @@
+---
+- name: Include vaultwarden task
+  ansible.builtin.include_tasks: tasks.yml
+  when: not role_vaultwarden_played
