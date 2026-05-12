@@ -1,0 +1,26 @@
+---
+
+services:
+  vaultwarden:
+    image: {{ vaultwarden_image }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ vaultwarden_http_port }}:80"
+    volumes:
+      - {{ vaultwarden_data_dir }}/data:/data
+    environment:
+      DOMAIN: "https://{{ vaultwarden_domain }}"
+      SIGNUPS_ALLOWED: "false"
+      INVITATIONS_ALLOWED: "true"
+      SHOW_PASSWORD_HINT: "false"
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      WEBSOCKET_ENABLED: "true"
+      SMTP_HOST: "{{ vaultwarden_smtp_host }}"
+      SMTP_FROM: "{{ vaultwarden_smtp_from }}"
+      SMTP_FROM_NAME: "Vaultwarden"
+      SMTP_PORT: "{{ vaultwarden_smtp_port }}"
+      SMTP_SECURITY: "{{ vaultwarden_smtp_security }}"
+      SMTP_USERNAME: "{{ vaultwarden_smtp_username }}"
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      LOG_LEVEL: "warn"
+      EXTENDED_LOGGING: "true"
