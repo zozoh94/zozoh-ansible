@@ -85,6 +85,8 @@ nginx_extra_conf_options: |
       cloud.zozoh.fr 192.168.0.98:443;
       collaboraonline.zozoh.fr 192.168.0.98:443;
 
+      vaultwarden.zozoh.fr 192.168.0.161:443;
+
       autodiscover.lagabelle-saint-hilaire.fr 192.168.0.97:443;
       autoconfig.lagabelle-saint-hilaire.fr 192.168.0.97:443;
       .zozoh.fr 192.168.0.97:443;
@@ -268,6 +270,17 @@ nginx_vhosts:
         {{ _nginx_proxy_headers | indent(8) }}
 
         proxy_pass http://192.168.0.98;
+      }
+  - listen: "80"
+    server_name: "vaultwarden.zozoh.fr"
+    filename: "vaultwarden.zozoh.fr-80.conf"
+    extra_parameters: |
+      location / {
+        gzip                    off;
+
+        {{ _nginx_proxy_headers | indent(8) }}
+
+        proxy_pass http://192.168.0.161;
       }
   - listen: "80"
     server_name: "zozoh.fr imap.zozoh.fr smtp.zozoh.fr postfix.zozoh.fr mail.zozoh.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr"
