@@ -1,0 +1,28 @@
+---
+private_network: "192.168.0.160/27"
+admin_network: "192.168.1.160/27"
+
+group_hosts:
+  vaultwarden.ovh.zozoh.fr: 192.168.0.161
+
+# Domain
+vaultwarden_domain: vaultwarden.zozoh.fr
+
+# Docker image
+vaultwarden_image: "vaultwarden/server:latest"
+
+# Port bound to localhost, proxied by host nginx
+vaultwarden_http_port: 8080
+
+# Reverse proxy IP (for proxy_protocol / set_real_ip_from)
+reverse_proxy_ip: 192.168.0.225
+
+# Data directory on host
+vaultwarden_data_dir: /opt/vaultwarden
+
+# SMTP relay
+vaultwarden_smtp_host: smtp.zozoh.fr
+vaultwarden_smtp_port: 587
+vaultwarden_smtp_security: starttls
+vaultwarden_smtp_username: vaultwarden@zozoh.fr
+vaultwarden_smtp_from: vaultwarden@zozoh.fr
