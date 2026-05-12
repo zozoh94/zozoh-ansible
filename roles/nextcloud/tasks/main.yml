@@ -1,0 +1,4 @@
+---
+- name: Include nextcloud task
+  ansible.builtin.include_tasks: tasks.yml
+  when: not role_nextcloud_played

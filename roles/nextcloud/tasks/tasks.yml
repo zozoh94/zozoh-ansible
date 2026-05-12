@@ -1,0 +1,161 @@
+---
+# ── Nginx & Certbot ──────────────────────────────────────────────
+
+- name: Install nginx and certbot
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+      - openssl
+    state: present
+
+- name: Create certbot webroot directory
+  ansible.builtin.file:
+    path: /var/www/certbot
+    state: directory
+    mode: "0755"
+
+- name: Create SSL directories for self-signed certificates
+  ansible.builtin.file:
+    path: "/etc/nginx/ssl/{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ nextcloud_domain }}"
+    - "{{ collabora_domain }}"
+
+- name: Generate self-signed certificate for {{ nextcloud_domain }}
+  ansible.builtin.command: >
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048
+    -keyout /etc/nginx/ssl/{{ nextcloud_domain }}/privkey.pem
+    -out /etc/nginx/ssl/{{ nextcloud_domain }}/fullchain.pem
+    -subj "/CN={{ nextcloud_domain }}"
+  args:
+    creates: "/etc/nginx/ssl/{{ nextcloud_domain }}/fullchain.pem"
+
+- name: Generate self-signed certificate for {{ collabora_domain }}
+  ansible.builtin.command: >
+    openssl req -x509 -nodes -days 3650 -newkey rsa:2048
+    -keyout /etc/nginx/ssl/{{ collabora_domain }}/privkey.pem
+    -out /etc/nginx/ssl/{{ collabora_domain }}/fullchain.pem
+    -subj "/CN={{ collabora_domain }}"
+  args:
+    creates: "/etc/nginx/ssl/{{ collabora_domain }}/fullchain.pem"
+
+- name: Check if Let's Encrypt certificate exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ nextcloud_domain }}/fullchain.pem"
+  register: letsencrypt_cert
+
+- name: Set SSL certificate path
+  ansible.builtin.set_fact:
+    nextcloud_ssl_cert_path: "{{ '/etc/letsencrypt/live/' + nextcloud_domain if letsencrypt_cert.stat.exists else '/etc/nginx/ssl/' + nextcloud_domain }}"
+    collabora_ssl_cert_path: "{{ '/etc/letsencrypt/live/' + nextcloud_domain if letsencrypt_cert.stat.exists else '/etc/nginx/ssl/' + collabora_domain }}"
+
+- name: Remove default nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Deploy nginx configuration
+  ansible.builtin.template:
+    src: nextcloud-nginx.conf.j2
+    dest: /etc/nginx/sites-available/nextcloud.conf
+    mode: "0644"
+  notify: Restart nginx
+
+- name: Enable nginx site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/nextcloud.conf
+    dest: /etc/nginx/sites-enabled/nextcloud.conf
+    state: link
+  notify: Restart nginx
+
+- name: Setup certbot renewal cron
+  ansible.builtin.cron:
+    name: "certbot renew"
+    minute: "30"
+    hour: "2"
+    weekday: "1"
+    job: "certbot renew --webroot -w /var/www/certbot --deploy-hook 'systemctl reload nginx' --quiet"
+    user: root
+
+# ── Docker Compose ────────────────────────────────────────────────
+
+- name: Create nextcloud data directory
+  ansible.builtin.file:
+    path: "{{ nextcloud_data_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Create nextcloud data subdirectories
+  ansible.builtin.file:
+    path: "{{ nextcloud_data_dir }}/data/{{ item.name }}"
+    state: directory
+    mode: "0755"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+  loop:
+    - { name: db, owner: "999", group: "999" }
+    - { name: nextcloud, owner: "33", group: "33" }
+
+- name: Deploy docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ nextcloud_data_dir }}/docker-compose.yml"
+    mode: "0644"
+  notify: Restart docker compose
+
+- name: Deploy .env file
+  ansible.builtin.copy:
+    dest: "{{ nextcloud_data_dir }}/.env"
+    mode: "0640"
+    content: |
+      POSTGRES_DB='{{ nextcloud_db_name }}'
+      POSTGRES_USER='{{ nextcloud_db_user }}'
+      POSTGRES_PASSWORD='{{ nextcloud_db_password }}'
+      REDIS_PASSWORD='{{ nextcloud_redis_password }}'
+      NEXTCLOUD_ADMIN_USER='{{ nextcloud_admin_user }}'
+      NEXTCLOUD_ADMIN_PASSWORD='{{ nextcloud_admin_password }}'
+      COLLABORA_ADMIN_PASSWORD='{{ collabora_admin_password }}'
+  notify: Restart docker compose
+
+# ── Start services ────────────────────────────────────────────────
+
+- name: Ensure nginx is started and enabled
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Start docker-compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ nextcloud_data_dir }}"
+  register: nextcloud_compose_output
+
+- ansible.builtin.debug:
+    var: nextcloud_compose_output
+
+- name: Wait for Nextcloud to be ready
+  ansible.builtin.command:
+    cmd: docker exec nextcloud-app-1 php occ status --output=json
+  register: nc_status
+  retries: 30
+  delay: 5
+  until: nc_status.rc == 0
+
+- name: Configure Redis connection
+  ansible.builtin.command:
+    cmd: "docker exec -u www-data nextcloud-app-1 php occ config:system:set {{ item.key }} {{ item.args }}"
+  loop:
+    - { key: "redis host", args: "--value=redis" }
+    - { key: "redis port", args: "--value=6379 --type=integer" }
+    - { key: "redis password", args: "--value={{ nextcloud_redis_password }}" }
+    - { key: "memcache.locking", args: "--value=\\OC\\Memcache\\Redis" }
+    - { key: "memcache.distributed", args: "--value=\\OC\\Memcache\\Redis" }
+  no_log: true
+
+- name: Role nextcloud played
+  ansible.builtin.set_fact:
+    role_nextcloud_played: true

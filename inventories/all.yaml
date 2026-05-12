@@ -6,34 +6,44 @@ all:
         common_proxy:
           hosts:
             proxy1.ovh.zozoh.fr:
+    nextcloud:
+      children:
+        nextcloud_web:
+          hosts:
+            nextcloud.ovh.zozoh.fr:
     gitlab:
       children:
-        webserver:
+        gitlab_webserver:
           hosts:
             gitlab.ovh.zozoh.fr:
-        runner:
+        gitlab_runner:
           hosts:
             gitlab-runner1.ovh.zozoh.fr:
     cs:
       children:
-        pg:
+        cs_pg:
           hosts:
             pg1.cs.ovh.zozoh.fr:
-        es:
+        cs_es:
           hosts:
             es1.cs.ovh.zozoh.fr:
-        broker:
+        cs_broker:
           hosts:
             broker1.cs.ovh.zozoh.fr:
-        web:
+        cs_web:
           hosts:
             web1.cs.ovh.zozoh.fr:
-        batch:
+        cs_batch:
           hosts:
             batch1.cs.ovh.zozoh.fr:
         cs_proxy:
           hosts:
             proxy1.cs.ovh.zozoh.fr:
-        media:
+        cs_media:
           hosts:
             media.cs.ovh.zozoh.fr:
+    vaultwarden:
+      children:
+        vaultwarden_web:
+          hosts:
+            vaultwarden.ovh.zozoh.fr:

@@ -1,0 +1,56 @@
+---
+
+services:
+  db:
+    image: {{ postgres_image }}
+    restart: unless-stopped
+    volumes:
+      - {{ nextcloud_data_dir }}/data/db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  redis:
+    image: {{ redis_image }}
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+
+  app:
+    image: {{ nextcloud_image }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ nextcloud_http_port }}:80"
+    volumes:
+      - {{ nextcloud_data_dir }}/data/nextcloud:/var/www/html
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_HOST_PASSWORD: ${REDIS_PASSWORD}
+      NEXTCLOUD_TRUSTED_DOMAINS: "{{ nextcloud_domain }}"
+      OVERWRITEPROTOCOL: https
+      OVERWRITEHOST: "{{ nextcloud_domain }}"
+      OVERWRITECLIURL: "https://{{ nextcloud_domain }}"
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
+      TRUSTED_PROXIES: "172.16.0.0/12"
+      APACHE_DISABLE_REWRITE_IP: 1
+    depends_on:
+      - db
+      - redis
+
+  collabora:
+    image: {{ collabora_image }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ collabora_port }}:9980"
+    environment:
+      aliasgroup1: "https://{{ nextcloud_domain }}:443"
+      extra_params: --o:ssl.enable=false --o:ssl.termination=true
+      username: admin
+      password: ${COLLABORA_ADMIN_PASSWORD}
+    cap_add:
+      - MKNOD

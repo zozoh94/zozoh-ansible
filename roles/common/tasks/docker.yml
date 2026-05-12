@@ -16,8 +16,16 @@
 
 - name: Install docker-ce
   apt:
-    name: docker-ce
+    name:
+      - docker-ce
+      - docker-compose-plugin
     state: latest
+
+- name: Add remote user to docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
 
 - name: Install docker-compose
   block:
@@ -34,6 +42,7 @@
     username: "{{ registry_zozoh_username }}"
     password: "{{ registry_zozoh_password }}"
     reauthorize: yes
+  when: docker_registry_login
 
 - name: Install pip
   apt:

@@ -1,0 +1,31 @@
+---
+private_network: "192.168.0.96/27"
+admin_network: "192.168.1.96/27"
+
+group_hosts:
+  nextcloud.ovh.zozoh.fr: 192.168.0.98
+
+# Domains
+nextcloud_domain: cloud.zozoh.fr
+collabora_domain: collaboraonline.zozoh.fr
+nextcloud_admin_user: admin
+
+# Database
+nextcloud_db_name: nextcloud
+nextcloud_db_user: nextcloud
+
+# Docker images
+nextcloud_image: "nextcloud:30-apache"
+postgres_image: "postgres:16-alpine"
+redis_image: "redis:7-alpine"
+collabora_image: "collabora/code:latest"
+
+# Ports (bound to localhost, proxied by host nginx)
+nextcloud_http_port: 8080
+collabora_port: 9980
+
+# Reverse proxy IP (for proxy_protocol / set_real_ip_from)
+reverse_proxy_ip: 192.168.0.225
+
+# Data directory on host
+nextcloud_data_dir: /opt/nextcloud

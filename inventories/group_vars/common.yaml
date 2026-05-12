@@ -82,6 +82,9 @@ nginx_extra_conf_options: |
       lagabelle-saint-hilaire.fr 127.0.0.1:4443;
       media.lagabelle-saint-hilaire.fr 127.0.0.1:4443;
       
+      cloud.zozoh.fr 192.168.0.98:443;
+      collaboraonline.zozoh.fr 192.168.0.98:443;
+
       autodiscover.lagabelle-saint-hilaire.fr 192.168.0.97:443;
       autoconfig.lagabelle-saint-hilaire.fr 192.168.0.97:443;
       .zozoh.fr 192.168.0.97:443;
@@ -256,7 +259,18 @@ nginx_vhosts:
       include /etc/nginx/ssl_options;
       ssl_dhparam /etc/nginx/ssl_dhparams.pem;
   - listen: "80"
-    server_name: "zozoh.fr imap.zozoh.fr smtp.zozoh.fr collaboraonline.zozoh.fr postfix.zozoh.fr mail.zozoh.fr cloud.zozoh.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr"
+    server_name: "cloud.zozoh.fr collaboraonline.zozoh.fr"
+    filename: "cloud.zozoh.fr-80.conf"
+    extra_parameters: |
+      location / {
+        gzip                    off;
+
+        {{ _nginx_proxy_headers | indent(8) }}
+
+        proxy_pass http://192.168.0.98;
+      }
+  - listen: "80"
+    server_name: "zozoh.fr imap.zozoh.fr smtp.zozoh.fr postfix.zozoh.fr mail.zozoh.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr"
     extra_parameters: |
       location / {
         gzip                    off;

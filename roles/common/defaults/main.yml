@@ -7,6 +7,7 @@ common_tools:
   - htop
 
 install_docker: false
+docker_registry_login: true
 registry_zozoh_username: enzo
 registry_zozoh_password: enzo
 docker_compose_url: https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
