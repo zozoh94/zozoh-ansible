@@ -70,6 +70,12 @@
 
 # ── Docker Compose ────────────────────────────────────────────────
 
+- name: Create vaultwarden base directory
+  ansible.builtin.file:
+    path: "{{ vaultwarden_data_dir }}"
+    state: directory
+    mode: "0750"
+
 - name: Create vaultwarden data directory
   ansible.builtin.file:
     path: "{{ vaultwarden_data_dir }}/data"
