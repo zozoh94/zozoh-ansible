@@ -9,3 +9,6 @@ roles:
   - name: geerlingguy.nginx
   - name: geerlingguy.certbot
   - name: riemers.gitlab-runner
+
+collections:
+  - name: community.general
