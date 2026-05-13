@@ -8,6 +8,8 @@ services:
       - "127.0.0.1:{{ vaultwarden_http_port }}:80"
     volumes:
       - {{ vaultwarden_data_dir }}/data:/data
+    extra_hosts:
+      - "{{ vaultwarden_smtp_host }}:{{ vaultwarden_smtp_host_ip }}"
     environment:
       DOMAIN: "https://{{ vaultwarden_domain }}"
       SIGNUPS_ALLOWED: "false"
