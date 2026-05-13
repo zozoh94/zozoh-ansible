@@ -19,29 +19,6 @@ all:
         gitlab_runner:
           hosts:
             gitlab-runner1.ovh.zozoh.fr:
-    cs:
-      children:
-        cs_pg:
-          hosts:
-            pg1.cs.ovh.zozoh.fr:
-        cs_es:
-          hosts:
-            es1.cs.ovh.zozoh.fr:
-        cs_broker:
-          hosts:
-            broker1.cs.ovh.zozoh.fr:
-        cs_web:
-          hosts:
-            web1.cs.ovh.zozoh.fr:
-        cs_batch:
-          hosts:
-            batch1.cs.ovh.zozoh.fr:
-        cs_proxy:
-          hosts:
-            proxy1.cs.ovh.zozoh.fr:
-        cs_media:
-          hosts:
-            media.cs.ovh.zozoh.fr:
     vaultwarden:
       children:
         vaultwarden_web:
