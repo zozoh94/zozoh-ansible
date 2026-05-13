@@ -1,0 +1,103 @@
+---
+# Debian 11 (bullseye) -> 12 (bookworm) in-place upgrade.
+# Spec: docs/superpowers/specs/2026-05-13-debian-12-upgrade-design.md
+#
+# Invocation:
+#   ansible-playbook playbooks/upgrade-debian.yaml \
+#       --limit <host> -e confirm_upgrade=yes
+
+- name: Upgrade Debian 11 -> 12
+  hosts: all
+  become: yes
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: yes
+
+  vars:
+    min_free_root_gb: 2
+    min_free_var_gb: 3
+
+  tasks:
+    # ----- Phase 1: pre-flight -----
+
+    - name: "Pre-flight: require confirm_upgrade=yes"
+      ansible.builtin.assert:
+        that:
+          - confirm_upgrade | default('') == 'yes'
+        fail_msg: >-
+          Refusing to run without -e confirm_upgrade=yes.
+          This playbook performs a destructive in-place distribution upgrade.
+
+    - name: "Pre-flight: short-circuit if already on bookworm"
+      ansible.builtin.meta: end_host
+      when: ansible_distribution_major_version == '12'
+
+    - name: "Pre-flight: verify host is on Debian 11"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'Debian'
+          - ansible_distribution_major_version == '11'
+        fail_msg: >-
+          Expected Debian 11, found
+          {{ ansible_distribution }} {{ ansible_distribution_major_version }}.
+
+    - name: "Pre-flight: gather free space on / and /var"
+      ansible.builtin.set_fact:
+        free_root_gb: >-
+          {{ (ansible_mounts | selectattr('mount', 'equalto', '/') | first).size_available
+             / 1024 / 1024 / 1024 }}
+        free_var_gb: >-
+          {{ ((ansible_mounts | selectattr('mount', 'equalto', '/var') | list)
+              | default([(ansible_mounts | selectattr('mount', 'equalto', '/') | first)], true)
+              | first).size_available
+             / 1024 / 1024 / 1024 }}
+
+    - name: "Pre-flight: assert enough free disk"
+      ansible.builtin.assert:
+        that:
+          - free_root_gb | float >= min_free_root_gb
+          - free_var_gb | float >= min_free_var_gb
+        fail_msg: >-
+          Insufficient free space.
+          / has {{ '%.1f' | format(free_root_gb | float) }}G (need {{ min_free_root_gb }}G),
+          /var has {{ '%.1f' | format(free_var_gb | float) }}G (need {{ min_free_var_gb }}G).
+
+    - name: "Pre-flight: dpkg --audit (must be empty)"
+      ansible.builtin.command: dpkg --audit
+      register: dpkg_audit
+      changed_when: false
+
+    - name: "Pre-flight: fail if dpkg reports issues"
+      ansible.builtin.assert:
+        that:
+          - dpkg_audit.stdout | trim | length == 0
+        fail_msg: |
+          dpkg --audit reported issues; resolve before upgrading:
+          {{ dpkg_audit.stdout }}
+
+    - name: "Pre-flight: apt-mark showhold (must be empty)"
+      ansible.builtin.command: apt-mark showhold
+      register: apt_holds
+      changed_when: false
+
+    - name: "Pre-flight: fail if any package is held"
+      ansible.builtin.assert:
+        that:
+          - apt_holds.stdout | trim | length == 0
+        fail_msg: |
+          Held packages would block the upgrade:
+          {{ apt_holds.stdout }}
+
+    - name: "Pre-flight: require Proxmox snapshot vars"
+      ansible.builtin.assert:
+        that:
+          - proxmox_api_host is defined and proxmox_api_host | length > 0
+          - proxmox_api_user is defined and proxmox_api_user | length > 0
+          - proxmox_api_token_id is defined and proxmox_api_token_id | length > 0
+          - proxmox_api_token_secret is defined and proxmox_api_token_secret | length > 0
+          - proxmox_node is defined and proxmox_node | length > 0
+          - proxmox_vmid is defined
+        fail_msg: >-
+          Missing one of the required Proxmox vars
+          (proxmox_api_host, proxmox_api_user, proxmox_api_token_id,
+           proxmox_api_token_secret, proxmox_node, proxmox_vmid).
