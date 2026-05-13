@@ -8,6 +8,7 @@ gitlab_create_self_signed_cert: true
 gitlab_self_signed_cert_subj: "/C=FR/ST=Ile-et-Vilaine/L=Rennes/O=Zozoh/CN={{ gitlab_domain }}"
 gitlab_registry_enable: true
 gitlab_registry_external_url: "https://registry.zozoh.fr"
+gitlab_pages_external_url: "http://pages.zozoh.fr"
 gitlab_redirect_http_to_https: false
 gitlab_nginx_listen_https: false
 gitlab_nginx_listen_port: 80
@@ -26,7 +27,11 @@ gitlab_extra_settings:
       - key: "listen_address"
         value: "0.0.0.0"
       - key: "listen_port"
-        value: "5678"        
+        value: "5678"
+  - registry:
+      - key: "database"
+        type: plain
+        value: "{ 'enabled' => true, 'host' => '/var/opt/gitlab/postgresql', 'port' => 5432, 'user' => 'registry', 'dbname' => 'registry', 'sslmode' => 'prefer' }"
 group_hosts:
   gitlab.zozoh.fr: 192.168.0.225
   registry.zozoh.fr: 192.168.0.225
