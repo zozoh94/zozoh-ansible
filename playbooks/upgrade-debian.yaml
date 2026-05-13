@@ -142,3 +142,56 @@
       ansible.builtin.apt:
         autoremove: yes
         purge: yes
+
+    # ----- Phase 3: rewrite APT sources bullseye -> bookworm -----
+
+    - name: "Phase 3: list APT sources files (.list)"
+      ansible.builtin.find:
+        paths:
+          - /etc/apt
+          - /etc/apt/sources.list.d
+        patterns:
+          - "*.list"
+        file_type: file
+        recurse: no
+      register: apt_list_files
+
+    - name: "Phase 3: list APT sources files (.sources, deb822)"
+      ansible.builtin.find:
+        paths:
+          - /etc/apt/sources.list.d
+        patterns:
+          - "*.sources"
+        file_type: file
+        recurse: no
+      register: apt_sources_files
+
+    - name: "Phase 3: rewrite bullseye -> bookworm in all source files"
+      ansible.builtin.replace:
+        path: "{{ item.path }}"
+        regexp: '\bbullseye\b'
+        replace: 'bookworm'
+        backup: yes
+      loop: "{{ (apt_list_files.files + apt_sources_files.files) }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: "Phase 3: ensure security suite uses bookworm-security URL"
+      ansible.builtin.replace:
+        path: /etc/apt/sources.list
+        regexp: 'http://security\.debian\.org/debian-security\s+bookworm/updates'
+        replace: 'http://security.debian.org/debian-security bookworm-security'
+        backup: yes
+
+    - name: "Phase 3: check for cloud-init sources template"
+      ansible.builtin.stat:
+        path: /etc/cloud/templates/sources.list.debian.tmpl
+      register: cloud_sources_tmpl
+
+    - name: "Phase 3: rewrite bullseye -> bookworm in cloud-init template"
+      ansible.builtin.replace:
+        path: /etc/cloud/templates/sources.list.debian.tmpl
+        regexp: '\bbullseye\b'
+        replace: 'bookworm'
+        backup: yes
+      when: cloud_sources_tmpl.stat.exists
