@@ -3,6 +3,12 @@ domain: ovh.zozoh.fr
 
 admin_email: enzo@zozoh.fr
 
+# Cross-cutting /etc/hosts entries applied on every managed host by the common role.
+# Use this for service names whose public DNS doesn't reach the private network
+# (e.g. smtp.zozoh.fr resolves to the proxy public IP which doesn't forward 587).
+global_hosts:
+  smtp.zozoh.fr: 192.168.0.97
+
 common_tools:
   - curl
   - htop

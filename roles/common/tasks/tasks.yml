@@ -20,7 +20,27 @@
     backup: yes
   when: item.key != ansible_host
   with_dict: "{{ group_hosts }}"
-  
+
+- name: Update /etc/hosts with global service entries
+  become: yes
+  lineinfile:
+    path: "/etc/hosts"
+    regexp: ".*\t{{ item.key }}\t{{ item.key | split('.') | first }}$"
+    line: "{{ item.value }}\t{{ item.key }}\t{{ item.key | split('.') | first }}"
+    state: present
+    backup: yes
+  with_dict: "{{ global_hosts | default({}) }}"
+
+- name: Update /etc/cloud/templates/hosts.debian.tmpl with global service entries
+  become: yes
+  lineinfile:
+    path: "/etc/cloud/templates/hosts.debian.tmpl"
+    regexp: ".*\t{{ item.key }}\t{{ item.key | split('.') | first }}$"
+    line: "{{ item.value }}\t{{ item.key }}\t{{ item.key | split('.') | first }}"
+    state: present
+    backup: yes
+  with_dict: "{{ global_hosts | default({}) }}"
+
 - name: Listen SSH on admin interface
   become: yes
   lineinfile:

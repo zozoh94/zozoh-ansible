@@ -23,6 +23,12 @@ services:
       - "127.0.0.1:{{ nextcloud_http_port }}:80"
     volumes:
       - {{ nextcloud_data_dir }}/data/nextcloud:/var/www/html
+{% if global_hosts | default({}) %}
+    extra_hosts:
+{% for host, ip in global_hosts.items() %}
+      - "{{ host }}:{{ ip }}"
+{% endfor %}
+{% endif %}
     environment:
       POSTGRES_HOST: db
       POSTGRES_DB: ${POSTGRES_DB}
