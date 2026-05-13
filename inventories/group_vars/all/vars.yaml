@@ -22,3 +22,12 @@ postgresql_packages:
   - libpq-dev
   - postgis
   - postgresql-11-postgis-2.5
+
+# Proxmox API used by playbooks/upgrade-debian.yaml.
+# Per-host VMIDs live as host vars in inventories/all.yaml.
+# Secrets (token id + secret) are in inventories/group_vars/all/vault.yaml.
+proxmox_api_host: ovh.zozoh.fr
+proxmox_api_port: 8006
+proxmox_api_user: enzo@pam!ansible-backup
+proxmox_node: pve
+proxmox_api_validate_certs: true
