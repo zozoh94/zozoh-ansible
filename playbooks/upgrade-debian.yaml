@@ -119,3 +119,26 @@
         state: present
       delegate_to: localhost
       become: false
+
+    # ----- Phase 2: fully patch on bullseye -----
+
+    - name: "Phase 2: apt update (bullseye)"
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: "Phase 2: apt upgrade (bullseye)"
+      ansible.builtin.apt:
+        upgrade: 'yes'
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: "Phase 2: apt full-upgrade (bullseye)"
+      ansible.builtin.apt:
+        upgrade: 'dist'
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: "Phase 2: apt autoremove (bullseye)"
+      ansible.builtin.apt:
+        autoremove: yes
+        purge: yes
