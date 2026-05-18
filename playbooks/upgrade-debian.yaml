@@ -195,3 +195,32 @@
         replace: 'bookworm'
         backup: yes
       when: cloud_sources_tmpl.stat.exists
+
+    # ----- Phase 4: distribution upgrade -----
+
+    - name: "Phase 4: apt update (bookworm)"
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: "Phase 4: minimal upgrade without new packages"
+      ansible.builtin.apt:
+        upgrade: 'yes'
+        dpkg_options: 'force-confold,force-confdef'
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: "Phase 4: full-upgrade to bookworm"
+      ansible.builtin.apt:
+        upgrade: 'dist'
+        dpkg_options: 'force-confold,force-confdef'
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: "Phase 4: apt autoremove"
+      ansible.builtin.apt:
+        autoremove: yes
+        purge: yes
+
+    - name: "Phase 4: apt clean"
+      ansible.builtin.command: apt-get clean
+      changed_when: false
