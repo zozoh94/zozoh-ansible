@@ -231,3 +231,43 @@
       ansible.builtin.reboot:
         reboot_timeout: 900
         msg: "Rebooting after Debian 12 upgrade"
+
+    # ----- Phase 6: post-upgrade verification -----
+
+    - name: "Phase 6: re-gather facts"
+      ansible.builtin.setup:
+
+    - name: "Phase 6: assert we are on bookworm"
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == 'Debian'
+          - ansible_distribution_major_version == '12'
+          - ansible_distribution_release == 'bookworm'
+        fail_msg: >-
+          Post-upgrade verification failed:
+          {{ ansible_distribution }} {{ ansible_distribution_major_version }}
+          ({{ ansible_distribution_release }}).
+
+    - name: "Phase 6: re-check held packages"
+      ansible.builtin.command: apt-mark showhold
+      register: post_holds
+      changed_when: false
+
+    - name: "Phase 6: find leftover .dpkg-dist / .ucf-dist files"
+      ansible.builtin.find:
+        paths: /etc
+        patterns:
+          - "*.dpkg-dist"
+          - "*.ucf-dist"
+        recurse: yes
+        file_type: file
+      register: leftover_configs
+
+    - name: "Phase 6: summary"
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }}"
+          - "Distribution: {{ ansible_distribution }} {{ ansible_distribution_version }} ({{ ansible_distribution_release }})"
+          - "Kernel: {{ ansible_kernel }}"
+          - "Held packages: {{ post_holds.stdout_lines | default([]) }}"
+          - "Leftover configs (review and merge manually): {{ leftover_configs.files | map(attribute='path') | list }}"
