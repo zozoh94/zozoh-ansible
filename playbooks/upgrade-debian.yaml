@@ -95,22 +95,19 @@
           - proxmox_api_user is defined and proxmox_api_user | length > 0
           - proxmox_api_token_id is defined and proxmox_api_token_id | length > 0
           - proxmox_api_token_secret is defined and proxmox_api_token_secret | length > 0
-          - proxmox_node is defined and proxmox_node | length > 0
           - proxmox_vmid is defined
         fail_msg: >-
           Missing one of the required Proxmox vars
           (proxmox_api_host, proxmox_api_user, proxmox_api_token_id,
-           proxmox_api_token_secret, proxmox_node, proxmox_vmid).
+           proxmox_api_token_secret, proxmox_vmid).
 
     - name: "Pre-flight: take Proxmox snapshot"
       community.general.proxmox_snap:
         api_host: "{{ proxmox_api_host }}"
-        api_port: "{{ proxmox_api_port | default(8006) }}"
         api_user: "{{ proxmox_api_user }}"
         api_token_id: "{{ proxmox_api_token_id }}"
         api_token_secret: "{{ proxmox_api_token_secret }}"
         validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
-        node: "{{ proxmox_node }}"
         vmid: "{{ proxmox_vmid }}"
         snapname: "pre-bookworm-{{ ansible_date_time.iso8601_basic_short }}"
         description: "Auto snapshot before Debian 12 upgrade ({{ inventory_hostname }})"
