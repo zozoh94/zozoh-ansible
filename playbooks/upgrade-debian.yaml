@@ -224,3 +224,10 @@
     - name: "Phase 4: apt clean"
       ansible.builtin.command: apt-get clean
       changed_when: false
+
+    # ----- Phase 5: reboot -----
+
+    - name: "Phase 5: reboot and wait for host to return"
+      ansible.builtin.reboot:
+        reboot_timeout: 900
+        msg: "Rebooting after Debian 12 upgrade"
