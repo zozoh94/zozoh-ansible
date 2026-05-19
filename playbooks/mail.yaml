@@ -1,5 +1,5 @@
 ---
-- hosts: mail
+- hosts: mailserver
   become: yes
 
   roles:

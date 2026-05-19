@@ -1,0 +1,62 @@
+---
+# Primary domain (used for cert hostname & default DKIM/DMARC reporting addresses)
+mailserver_domain: zozoh.fr
+# Hostname = apex on purpose: PTR for this IP is zozoh.fr, so postfix's
+# HELO/banner (myhostname) and the cert primary must also be zozoh.fr to pass
+# FCrDNS at Gmail/Outlook.
+mailserver_hostname: zozoh.fr
+# MX target stays mail.zozoh.fr (default). The OVH-DNS task creates two A
+# records at the same IP: apex zozoh.fr (FCrDNS) and mail.zozoh.fr (MX target).
+mailserver_admin_email: enzo@zozoh.fr
+
+# Add mail.zozoh.fr as SAN so STARTTLS to that name still serves a valid cert.
+# Both apex and mail A records must exist BEFORE first certbot run (HTTP-01
+# challenge needs the names to resolve to this host); pre-create them in OVH.
+mailserver_certbot_extra_domains:
+  - mail.zozoh.fr
+
+# All virtual mail domains served by this host
+mailserver_domains:
+  - zozoh.fr
+  - lagabelle-saint-hilaire.fr
+
+# Mailboxes (plaintext passwords come from vault.yaml; hashed at apply time with doveadm -s BLF-CRYPT)
+mailserver_mailboxes:
+  - username: cloud@zozoh.fr
+    name: Nextcloud
+    password: "{{ vault_mailserver_password_cloud_zozoh }}"
+  - username: enzo@zozoh.fr
+    name: Enzo
+    password: "{{ vault_mailserver_password_enzo_zozoh }}"
+    quota_mb: 8192
+  - username: vaultwarden@zozoh.fr
+    name: Vaultwarden
+    password: "{{ vault_mailserver_password_vaultwarden_zozoh }}"
+  - username: web@lagabelle-saint-hilaire.fr
+    name: La Gabelle web
+    password: "{{ vault_mailserver_password_web_lagabelle }}"
+
+# Aliases. noreply/no-reply for every domain are added automatically by the role
+# (see mailserver_noreply_*); only declare the human-meaningful ones here.
+mailserver_aliases:
+  # zozoh.fr → enzo@zozoh.fr
+  - { address: "abuse@zozoh.fr",       goto: "enzo@zozoh.fr" }
+  - { address: "contact@zozoh.fr",     goto: "enzo@zozoh.fr" }
+  - { address: "hostmaster@zozoh.fr",  goto: "enzo@zozoh.fr" }
+  - { address: "postmaster@zozoh.fr",  goto: "enzo@zozoh.fr" }
+  - { address: "webmaster@zozoh.fr",   goto: "enzo@zozoh.fr" }
+  # lagabelle-saint-hilaire.fr → external mailbox
+  - { address: "contact@lagabelle-saint-hilaire.fr", goto: "lagabellesthilaire@gmail.com" }
+
+# PostgreSQL — local instance for postfix/dovecot lookups
+mailserver_db_password: "{{ vault_mailserver_db_password }}"
+
+# Quota: per-mailbox via prefetch userdb (see mailbox.quota in DB)
+mailserver_quota_enabled: true
+mailserver_quota_default_mb: 2048
+
+# OVH DNS automation for both domains
+mailserver_ovh_dns_enabled: true
+mailserver_ovh_application_key: "{{ vault_mailserver_ovh_application_key }}"
+mailserver_ovh_application_secret: "{{ vault_mailserver_ovh_application_secret }}"
+mailserver_ovh_consumer_key: "{{ vault_mailserver_ovh_consumer_key }}"
