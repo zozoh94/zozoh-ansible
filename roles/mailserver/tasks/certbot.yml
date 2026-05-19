@@ -8,8 +8,9 @@
   ansible.builtin.command: >
     certbot certonly --standalone --non-interactive --agree-tos
     --email {{ mailserver_certbot_email }}
+    --cert-name {{ mailserver_domain }}
     -d {{ mailserver_hostname }}
-    -d {{ mailserver_domain }}
+    {% for d in mailserver_certbot_extra_domains %}-d {{ d }} {% endfor %}
   when: not tls_cert_stat.stat.exists
   register: certbot_result
   changed_when: "'Successfully received certificate' in certbot_result.stdout"

@@ -4,6 +4,11 @@ role_mailserver_played: false
 
 # ─── General ────────────────────────────────────────────────────────────────────
 mailserver_hostname: "mail.{{ mailserver_domain }}"
+# MX target — what remote MTAs find via MX lookup. Must be a real A record
+# (RFC 2181 §10.3 forbids MX → CNAME). Defaults to mail.<domain>. When
+# mailserver_hostname is the apex (PTR = apex), this stays at mail.<domain>
+# and the OVH-DNS task creates two A records at the same IP.
+mailserver_mx_host: "mail.{{ mailserver_domain }}"
 mailserver_domain: "zozoh.fr"
 mailserver_admin_email: "admin@{{ mailserver_domain }}"
 
@@ -44,6 +49,10 @@ mailserver_tls_fullchain: "/etc/letsencrypt/live/{{ mailserver_domain }}/fullcha
 mailserver_certbot_email: "{{ mailserver_admin_email }}"
 # Set to false if you manage certificates externally
 mailserver_certbot_enabled: true
+# Extra SAN domains for the cert beyond mailserver_hostname. Leave empty unless
+# every entry also has an A record pointing to THIS host (certbot uses --standalone
+# on port 80; if the A record points elsewhere the HTTP-01 challenge will fail).
+mailserver_certbot_extra_domains: []
 
 # ─── Postfix ────────────────────────────────────────────────────────────────────
 mailserver_message_size_limit: 502400000

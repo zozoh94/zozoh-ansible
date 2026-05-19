@@ -145,6 +145,8 @@ def read_dkim_public_key(domain, selector, key_dir):
 def main():
     client = get_client()
     hostname = os.environ["MAIL_HOSTNAME"]
+    # MX target. RFC 2181 forbids MX -> CNAME, so this name must end up as an A.
+    mx_host = os.environ.get("MAIL_MX_HOST") or hostname
     public_ip = os.environ["MAIL_PUBLIC_IP"]
     domains = os.environ["MAIL_DOMAINS"].split(",")
     selector = os.environ["DKIM_SELECTOR"]
@@ -162,13 +164,26 @@ def main():
         print(f"\n=== Configuring DNS for {domain} (zone: {zone}) ===")
 
         try:
-            # A record for mail hostname (only for the primary domain)
-            mail_sub = get_subdomain(hostname, zone)
-            if mail_sub:
-                ensure_record(client, zone, mail_sub, "A", public_ip)
+            # A records, in whichever zone owns each name. We may emit:
+            #   - one A for `hostname` (PTR/HELO/cert primary). May be apex.
+            #   - one A for `mx_host`  (MX target). Must be A, never CNAME.
+            # When both names live in the same zone and are identical, we emit
+            # one record; when they differ but share the IP we emit both.
+            emitted_in_zone = set()
+            for name in (hostname, mx_host):
+                if name in emitted_in_zone:
+                    continue
+                if name == zone:
+                    ensure_record(client, zone, "", "A", public_ip)
+                    emitted_in_zone.add(name)
+                elif name.endswith("." + zone):
+                    sub = name[: -(len(zone) + 1)]
+                    ensure_record(client, zone, sub, "A", public_ip)
+                    emitted_in_zone.add(name)
+                # else: name lives in a different zone; skip silently.
 
-            # MX record
-            ensure_mx_record(client, zone, subdomain, hostname, mx_priority)
+            # MX record -> mx_host (never CNAME). Cross-zone targets are fine.
+            ensure_mx_record(client, zone, subdomain, mx_host, mx_priority)
 
             # SPF record
             ensure_record(client, zone, subdomain, "TXT", f'"{spf}"')
