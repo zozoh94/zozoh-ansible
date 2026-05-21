@@ -43,6 +43,16 @@ mailserver_aliases: []
 #  - address: "postmaster@zozoh.fr"
 #    goto: "enzo@zozoh.fr"
 
+# ─── Discard (noreply) ─────────────────────────────────────────────────────────
+# When enabled, for each domain in mailserver_domains the role inserts alias rows
+# (noreply@<domain>, no-reply@<domain>) that route to a single discard target
+# (mailserver_noreply_target) which postfix routes via the discard transport.
+mailserver_noreply_enabled: true
+mailserver_noreply_users:
+  - "noreply"
+  - "no-reply"
+mailserver_noreply_target: "devnull@localhost"
+
 # ─── Quota ─────────────────────────────────────────────────────────────────────
 # Enables Dovecot maildir quota plugin. Per-mailbox limit comes from the DB
 # (mailbox.quota, in MB). 0 means unlimited.

@@ -43,6 +43,10 @@
   ansible.builtin.command: postmap /etc/postfix/virtual
   changed_when: true
 
+- name: Rebuild postfix transport map
+  ansible.builtin.command: postmap /etc/postfix/transport
+  changed_when: true
+
 - name: Rebuild postfix header checks
   ansible.builtin.command: postmap -fq pcre:/etc/postfix/header_checks
   changed_when: true

@@ -60,8 +60,23 @@
     - Rebuild postfix virtual map
     - Restart postfix
 
+- name: Deploy Postfix transport map
+  ansible.builtin.template:
+    src: postfix/transport.j2
+    dest: /etc/postfix/transport
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Rebuild postfix transport map
+    - Restart postfix
+
 - name: Build virtual map
   ansible.builtin.command: postmap /etc/postfix/virtual
+  changed_when: true
+
+- name: Build transport map
+  ansible.builtin.command: postmap /etc/postfix/transport
   changed_when: true
 
 - name: Ensure postfix user is in opendkim group

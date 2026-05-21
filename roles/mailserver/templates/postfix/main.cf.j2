@@ -93,6 +93,8 @@ virtual_alias_maps      = pgsql:/etc/postfix/pgsql-virtual-alias-maps.cf,
                           pgsql:/etc/postfix/pgsql-virtual-alias-domain-catchall-maps.cf,
                           hash:/etc/postfix/virtual
 
+transport_maps          = hash:/etc/postfix/transport
+
 ######################
 ## ERRORS REPORTING ##
 ######################

@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+# Static transport routing. Mailbox/alias domains use virtual_transport (lmtp).
+# This file routes the noreply discard target to the built-in `discard` agent.
+{% if mailserver_noreply_enabled %}
+{{ mailserver_noreply_target }}    discard:
+{% endif %}

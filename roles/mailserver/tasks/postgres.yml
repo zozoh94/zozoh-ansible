@@ -175,3 +175,34 @@
         goto = EXCLUDED.goto,
         modified = NOW();
   loop: "{{ mailserver_aliases }}"
+
+- name: Build noreply alias list
+  ansible.builtin.set_fact:
+    _mailserver_noreply_aliases: >-
+      {{
+        mailserver_domains
+        | product(mailserver_noreply_users)
+        | map('reverse')
+        | map('join', '@')
+        | list
+      }}
+  when: mailserver_noreply_enabled
+
+- name: Create noreply discard aliases
+  become: true
+  become_user: postgres
+  community.postgresql.postgresql_query:
+    db: "{{ mailserver_db_name }}"
+    query: >
+      INSERT INTO alias (address, goto, domain, active)
+      VALUES (
+        '{{ item }}',
+        '{{ mailserver_noreply_target }}',
+        '{{ item.split("@")[1] }}',
+        TRUE
+      )
+      ON CONFLICT (address) DO UPDATE SET
+        goto = EXCLUDED.goto,
+        modified = NOW();
+  loop: "{{ _mailserver_noreply_aliases | default([]) }}"
+  when: mailserver_noreply_enabled
