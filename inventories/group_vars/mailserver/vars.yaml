@@ -9,11 +9,13 @@ mailserver_hostname: zozoh.fr
 # records at the same IP: apex zozoh.fr (FCrDNS) and mail.zozoh.fr (MX target).
 mailserver_admin_email: enzo@zozoh.fr
 
-# Add mail.zozoh.fr as SAN so STARTTLS to that name still serves a valid cert.
-# Both apex and mail A records must exist BEFORE first certbot run (HTTP-01
-# challenge needs the names to resolve to this host); pre-create them in OVH.
-mailserver_certbot_extra_domains:
-  - mail.zozoh.fr
+# DNS-01 wildcard issuance via OVH API — covers mail, autoconfig, autodiscover,
+# imap, smtp, and any future *.zozoh.fr name without re-running SAN bookkeeping.
+mailserver_certbot_challenge: dns-ovh
+mailserver_certbot_wildcards: true
+# Empty: under wildcard issuance, extra SANs are redundant. Left as a list for
+# forward compatibility.
+mailserver_certbot_extra_domains: []
 
 # All virtual mail domains served by this host
 mailserver_domains:
