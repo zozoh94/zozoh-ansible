@@ -129,6 +129,34 @@ def ensure_mx_record(client, zone, subdomain, target, priority):
     changed = True
 
 
+def ensure_srv_record(client, zone, subdomain, priority, weight, port, target, ttl=3600):
+    """Ensure an SRV record exists. RFC 2782 format: 'priority weight port target.'.
+    Negative record per RFC 6186: priority=0, weight=0, port=0, target='.' (single dot)."""
+    global changed
+    if target == ".":
+        srv_target = "0 0 0 ."
+    else:
+        srv_target = f"{priority} {weight} {port} {target}."
+    existing = find_existing_record(client, zone, subdomain, "SRV")
+    for rec in existing:
+        if rec["target"] == srv_target:
+            print(f"  OK: SRV {subdomain}.{zone} -> {srv_target}")
+            return
+        # An SRV with the same name but different value: leave it alone and
+        # log; if the user has an override they keep it. Idempotency favors
+        # not deleting records we did not create.
+    api_call_with_retry(
+        client.post,
+        f"/domain/zone/{zone}/record",
+        fieldType="SRV",
+        subDomain=subdomain,
+        target=srv_target,
+        ttl=ttl,
+    )
+    print(f"  CREATED: SRV {subdomain}.{zone} -> {srv_target}")
+    changed = True
+
+
 def read_dkim_public_key(domain, selector, key_dir):
     """Read DKIM public key from the generated .txt file and return DNS value."""
     key_file = os.path.join(key_dir, domain, f"{selector}.txt")
@@ -219,11 +247,30 @@ def main():
                     alias_subdomain = f"{alias}.{subdomain}"
                 ensure_record(client, zone, alias_subdomain, "CNAME", f"{hostname}.")
 
-            # Autoconfig record (for Thunderbird and other clients)
-            autoconfig_subdomain = "autoconfig"
-            if subdomain:
-                autoconfig_subdomain = f"autoconfig.{subdomain}"
-            ensure_record(client, zone, autoconfig_subdomain, "CNAME", f"{hostname}.")
+            # Autoconfig / Autodiscover CNAMEs — both point at the mail host so
+            # nginx can serve per-Host XML files for Thunderbird and Outlook.
+            for alias in ("autoconfig", "autodiscover"):
+                alias_subdomain = alias
+                if subdomain:
+                    alias_subdomain = f"{alias}.{subdomain}"
+                ensure_record(client, zone, alias_subdomain, "CNAME", f"{hostname}.")
+
+            # RFC 6186 SRV records — modern clients (Thunderbird, Apple Mail,
+            # K-9) use these instead of the HTTP discovery URLs.
+            srv_target_host = os.environ.get("MAIL_SRV_TARGET", hostname)
+
+            def srv_sub(name):
+                return f"{name}.{subdomain}" if subdomain else name
+
+            # Positive: IMAPS:993, Submission:587 STARTTLS.
+            ensure_srv_record(client, zone, srv_sub("_imaps._tcp"),
+                              0, 1, 993, srv_target_host)
+            ensure_srv_record(client, zone, srv_sub("_submission._tcp"),
+                              0, 1, 587, srv_target_host)
+            # Negative: explicitly tell clients NOT to use these protocols.
+            for negative in ("_imap._tcp", "_pop3._tcp", "_pop3s._tcp"):
+                ensure_srv_record(client, zone, srv_sub(negative),
+                                  0, 0, 0, ".")
 
             # TLSA records for DANE (if hash provided)
             if tlsa_hash:
