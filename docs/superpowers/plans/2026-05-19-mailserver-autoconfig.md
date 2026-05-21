@@ -933,7 +933,7 @@ Run:
 ```bash
 ansible-playbook playbooks/mail.yaml \
     -i inventories/all.yaml \
-    --limit zozoh.fr \
+    --limit mailserver.ovh.zozoh.fr \
     --check --diff
 ```
 
@@ -965,7 +965,7 @@ Use whatever the user normally uses for `proxmox_snap`. Confirm the snapshot exi
 ```bash
 ansible-playbook playbooks/mail.yaml \
     -i inventories/all.yaml \
-    --limit zozoh.fr \
+    --limit mailserver.ovh.zozoh.fr \
     --diff
 ```
 
