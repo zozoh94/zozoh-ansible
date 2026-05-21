@@ -30,6 +30,7 @@
     OVH_CONSUMER_KEY: "{{ mailserver_ovh_consumer_key }}"
     MAIL_HOSTNAME: "{{ mailserver_hostname }}"
     MAIL_MX_HOST: "{{ mailserver_mx_host }}"
+    MAIL_SRV_TARGET: "{{ mailserver_autoconfig_advertised_host }}"
     MAIL_PUBLIC_IP: "{{ _mailserver_public_ip }}"
     MAIL_DOMAINS: "{{ mailserver_domains | join(',') }}"
     DKIM_SELECTOR: "{{ mailserver_dkim_selector }}"
