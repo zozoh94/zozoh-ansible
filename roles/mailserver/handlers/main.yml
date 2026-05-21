@@ -56,3 +56,13 @@
   ansible.builtin.command: postmap -F hash:/etc/postfix/sni_map
   changed_when: true
   notify: Reload postfix
+
+- name: Reload nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+
+- name: Restart nginx
+  ansible.builtin.service:
+    name: nginx
+    state: restarted
