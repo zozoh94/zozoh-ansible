@@ -29,17 +29,26 @@ mailserver_db_user: "postfix"
 mailserver_db_password: "CHANGEME_DB_PASSWORD"
 
 # ─── Mailboxes & Aliases (managed via Ansible, no web UI) ──────────────────────
-# Each entry: { username: "user@domain.tld", password: "plaintext_or_hash", name: "Display Name" }
-# Passwords will be hashed with BLF-CRYPT if provided in plaintext
+# Each entry: { username: "user@domain.tld", password: "plaintext_or_hash", name: "Display Name", quota_mb: 2048 }
+# - password is hashed with BLF-CRYPT at apply time
+# - quota_mb is optional, falls back to mailserver_quota_default_mb
 mailserver_mailboxes: []
 #  - username: "enzo@zozoh.fr"
 #    password: "changeme"
 #    name: "Enzo"
+#    quota_mb: 5120
 
 # Each entry: { address: "alias@domain.tld", goto: "target@domain.tld" }
 mailserver_aliases: []
 #  - address: "postmaster@zozoh.fr"
 #    goto: "enzo@zozoh.fr"
+
+# ─── Quota ─────────────────────────────────────────────────────────────────────
+# Enables Dovecot maildir quota plugin. Per-mailbox limit comes from the DB
+# (mailbox.quota, in MB). 0 means unlimited.
+mailserver_quota_enabled: true
+mailserver_quota_default_mb: 2048
+mailserver_quota_warning_percent: 90
 
 # ─── TLS / Let's Encrypt ───────────────────────────────────────────────────────
 mailserver_tls_cert: "/etc/letsencrypt/live/{{ mailserver_domain }}/cert.pem"

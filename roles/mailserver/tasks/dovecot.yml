@@ -35,6 +35,23 @@
     - auth-sql.conf.ext
   notify: Restart dovecot
 
+- name: Deploy Dovecot quota config
+  ansible.builtin.template:
+    src: dovecot/conf.d/90-quota.conf.j2
+    dest: /etc/dovecot/conf.d/90-quota.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: mailserver_quota_enabled
+  notify: Restart dovecot
+
+- name: Remove Dovecot quota config when disabled
+  ansible.builtin.file:
+    path: /etc/dovecot/conf.d/90-quota.conf
+    state: absent
+  when: not mailserver_quota_enabled
+  notify: Restart dovecot
+
 - name: Set Dovecot directory permissions
   ansible.builtin.file:
     path: /etc/dovecot

@@ -5,4 +5,16 @@ connect = host={{ mailserver_db_host }} dbname={{ mailserver_db_name }} user={{ 
 
 default_pass_scheme = {{ mailserver_password_scheme }}
 
-password_query = SELECT password FROM mailbox WHERE username = '%u'
+{% if mailserver_quota_enabled %}
+# mailbox.quota is stored in MB; convert to KB for Dovecot quota_rule storage=.
+# userdb_* extras feed the `prefetch` userdb so we keep a single auth query.
+password_query = \
+  SELECT username AS user, password, \
+         '{{ mailserver_vmail_dir }}/' || domain || '/' || local_part AS userdb_home, \
+         {{ mailserver_vmail_uid }} AS userdb_uid, \
+         {{ mailserver_vmail_gid }} AS userdb_gid, \
+         'maildir:storage=' || (quota * 1024) AS userdb_quota_rule \
+  FROM mailbox WHERE username = '%u' AND active = true
+{% else %}
+password_query = SELECT password FROM mailbox WHERE username = '%u' AND active = true
+{% endif %}

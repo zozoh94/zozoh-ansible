@@ -3,9 +3,20 @@ passdb {
   args = /etc/dovecot/dovecot-sql.conf.ext
 }
 
-# %d = domain.tld
-# %n = username
+{% if mailserver_quota_enabled %}
+# passdb returns userdb_* extra fields (home, uid, gid, quota_rule); prefetch consumes them.
+userdb {
+  driver = prefetch
+}
+
+# Fallback when prefetch yields nothing (e.g. doveadm lookups without a passdb auth).
 userdb {
   driver = static
   args = uid=vmail gid=vmail home={{ mailserver_vmail_dir }}/%d/%n
 }
+{% else %}
+userdb {
+  driver = static
+  args = uid=vmail gid=vmail home={{ mailserver_vmail_dir }}/%d/%n
+}
+{% endif %}

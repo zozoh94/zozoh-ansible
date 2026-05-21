@@ -139,12 +139,13 @@
   community.postgresql.postgresql_query:
     db: "{{ mailserver_db_name }}"
     query: >
-      INSERT INTO mailbox (username, password, name, maildir, domain, local_part, active)
+      INSERT INTO mailbox (username, password, name, maildir, quota, domain, local_part, active)
       VALUES (
         '{{ item.item.username }}',
         '{{ item.stdout }}',
         '{{ item.item.name | default("") }}',
         '{{ item.item.username.split("@")[1] }}/{{ item.item.username.split("@")[0] }}/',
+        {{ item.item.quota_mb | default(mailserver_quota_default_mb) }},
         '{{ item.item.username.split("@")[1] }}',
         '{{ item.item.username.split("@")[0] }}',
         TRUE
@@ -152,6 +153,7 @@
       ON CONFLICT (username) DO UPDATE SET
         password = EXCLUDED.password,
         name = EXCLUDED.name,
+        quota = EXCLUDED.quota,
         modified = NOW();
   loop: "{{ _mailserver_hashed_passwords.results }}"
   no_log: true
