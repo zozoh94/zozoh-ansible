@@ -28,6 +28,6 @@ postgresql_packages:
 # Secrets (token id + secret) are in inventories/group_vars/all/vault.yaml.
 proxmox_api_host: ovh.zozoh.fr
 proxmox_api_port: 8006
-proxmox_api_user: enzo@pam!ansible-backup
+proxmox_api_user: enzo@pam
 proxmox_node: pve
 proxmox_api_validate_certs: true
