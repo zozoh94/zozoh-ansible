@@ -1,4 +1,14 @@
 ---
+- name: Render OVH API credentials for certbot DNS-01
+  ansible.builtin.template:
+    src: letsencrypt/ovh.ini.j2
+    dest: /etc/letsencrypt/ovh.ini
+    owner: root
+    group: root
+    mode: "0600"
+  when: mailserver_certbot_challenge == "dns-ovh"
+  no_log: true
+
 - name: Check if TLS certificate exists
   ansible.builtin.stat:
     path: "{{ mailserver_tls_cert }}"
