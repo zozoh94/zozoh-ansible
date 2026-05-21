@@ -143,3 +143,26 @@ mailserver_monitoring_enabled: true
 
 # ─── Additional submission port ────────────────────────────────────────────────
 mailserver_extra_submission_port: 2525
+
+# ─── Autoconfig / Autodiscover ─────────────────────────────────────────────────
+# Serves Thunderbird (autoconfig.<domain>/mail/config-v1.1.xml) and Outlook
+# (autodiscover.<domain>/autodiscover/autodiscover.xml) for every domain in
+# mailserver_domains. Static XML, no PHP/FPM.
+mailserver_autoconfig_enabled: true
+# Host advertised in the XML and SRV records. MUST be covered by the TLS cert
+# the mail services use. Default = mail.<primary_domain>, which the per-domain
+# wildcard cert covers.
+mailserver_autoconfig_advertised_host: "mail.{{ mailserver_domain }}"
+
+# ─── Certbot challenge ─────────────────────────────────────────────────────────
+# 'standalone' = legacy HTTP-01 path (port 80, must be free).
+# 'dns-ovh'    = DNS-01 via OVH API. Requires python3-certbot-dns-ovh and the
+#                same vault_mailserver_ovh_* credentials the DNS automation uses.
+# Switch to 'dns-ovh' once OVH credentials are in vault and the role has run
+# once successfully with the new package installed.
+mailserver_certbot_challenge: standalone
+# When true (with dns-ovh) issues one wildcard cert per entry in
+# mailserver_domains: -d <d> -d *.<d>. Required for autoconfig/autodiscover
+# SANs to be covered without enumerating each one.
+mailserver_certbot_wildcards: false
+mailserver_certbot_dns_propagation_seconds: 60
