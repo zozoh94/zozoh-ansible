@@ -1,0 +1,71 @@
+---
+# Renders the autoconfig nginx vhost and per-domain XML files.
+# Runs after certbot.yml so the wildcard certs are in place.
+
+- name: Disable default nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Ensure /var/www/autoconfig exists
+  ansible.builtin.file:
+    path: /var/www/autoconfig
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create per-domain webroot directories
+  ansible.builtin.file:
+    path: "/var/www/autoconfig/{{ item.0 }}.{{ item.1 }}/{{ item.2 }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ ['autoconfig'] | product(mailserver_domains, ['mail']) | list
+          + ['autodiscover'] | product(mailserver_domains, ['autodiscover']) | list }}"
+
+- name: Render Thunderbird autoconfig XML per domain
+  ansible.builtin.template:
+    src: autoconfig/config-v1.1.xml.j2
+    dest: "/var/www/autoconfig/autoconfig.{{ item }}/mail/config-v1.1.xml"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ mailserver_domains }}"
+
+- name: Render Outlook autodiscover XML per domain
+  ansible.builtin.template:
+    src: autoconfig/autodiscover.xml.j2
+    dest: "/var/www/autoconfig/autodiscover.{{ item }}/autodiscover/autodiscover.xml"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ mailserver_domains }}"
+
+- name: Render nginx autoconfig vhost
+  ansible.builtin.template:
+    src: autoconfig/mail-autoconfig.conf.j2
+    dest: /etc/nginx/sites-available/mail-autoconfig.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload nginx
+
+- name: Enable nginx autoconfig vhost
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/mail-autoconfig.conf
+    dest: /etc/nginx/sites-enabled/mail-autoconfig.conf
+    state: link
+  notify: Reload nginx
+
+- name: Validate nginx config
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure nginx is enabled and running
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true

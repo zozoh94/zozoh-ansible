@@ -32,6 +32,10 @@
 - name: Configure SpamAssassin
   ansible.builtin.include_tasks: spamassassin.yml
 
+- name: Configure mail autoconfig (Thunderbird, Outlook) and nginx vhost
+  ansible.builtin.include_tasks: autoconfig.yml
+  when: mailserver_autoconfig_enabled
+
 - name: Configure fail2ban
   ansible.builtin.include_tasks: fail2ban.yml
 
