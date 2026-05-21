@@ -20,6 +20,8 @@
       - postgresql
       - postgresql-contrib
       - certbot
+      - python3-certbot-dns-ovh
+      - nginx
       - python3-psycopg2
       - python3-pip
       - procmail
