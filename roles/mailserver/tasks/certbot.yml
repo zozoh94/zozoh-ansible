@@ -47,3 +47,11 @@
     hour: "3"
     job: "certbot renew --quiet"
     user: root
+
+- name: Install certbot deploy hook (reload services on renewal)
+  ansible.builtin.copy:
+    src: letsencrypt-deploy-hook.sh
+    dest: /etc/letsencrypt/renewal-hooks/deploy/zozoh-reload.sh
+    owner: root
+    group: root
+    mode: "0755"
