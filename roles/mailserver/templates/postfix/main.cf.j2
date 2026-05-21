@@ -53,6 +53,9 @@ smtpd_tls_exclude_ciphers     = aNULL,eNULL,EXPORT,DES,3DES,RC2,RC4,MD5,PSK,SRP,
 smtpd_tls_CAfile              = $smtp_tls_CAfile
 smtpd_tls_cert_file           = {{ mailserver_tls_cert }}
 smtpd_tls_key_file            = {{ mailserver_tls_key }}
+{% if mailserver_certbot_challenge == "dns-ovh" %}
+tls_server_sni_maps           = hash:/etc/postfix/sni_map
+{% endif %}
 smtpd_tls_dh1024_param_file   = $config_directory/dh4096.pem
 
 tls_random_source      = dev:/dev/urandom

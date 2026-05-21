@@ -1,0 +1,9 @@
+# Managed by Ansible — Postfix tls_server_sni_maps source.
+# Format: <name> <key file> <chain file>
+# After editing, regenerate the .db with: postmap -F hash:/etc/postfix/sni_map
+{% if mailserver_certbot_challenge == "dns-ovh" %}
+{% for d in mailserver_domains %}
+{{ d }} /etc/letsencrypt/live/{{ d }}/privkey.pem /etc/letsencrypt/live/{{ d }}/fullchain.pem
+*.{{ d }} /etc/letsencrypt/live/{{ d }}/privkey.pem /etc/letsencrypt/live/{{ d }}/fullchain.pem
+{% endfor %}
+{% endif %}

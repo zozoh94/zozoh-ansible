@@ -71,6 +71,22 @@
     - Rebuild postfix transport map
     - Restart postfix
 
+- name: Render Postfix SNI map
+  ansible.builtin.template:
+    src: postfix/sni_map.j2
+    dest: /etc/postfix/sni_map
+    owner: root
+    group: root
+    mode: "0644"
+  when: mailserver_certbot_challenge == "dns-ovh"
+  notify: Rebuild postfix sni map
+
+- name: Ensure SNI map is built (initial deploy)
+  ansible.builtin.command: postmap -F hash:/etc/postfix/sni_map
+  args:
+    creates: /etc/postfix/sni_map.db
+  when: mailserver_certbot_challenge == "dns-ovh"
+
 - name: Build virtual map
   ansible.builtin.command: postmap /etc/postfix/virtual
   changed_when: true

@@ -51,3 +51,8 @@
   ansible.builtin.command: postmap -fq pcre:/etc/postfix/header_checks
   changed_when: true
   failed_when: false
+
+- name: Rebuild postfix sni map
+  ansible.builtin.command: postmap -F hash:/etc/postfix/sni_map
+  changed_when: true
+  notify: Reload postfix
