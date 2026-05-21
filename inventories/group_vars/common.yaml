@@ -89,7 +89,14 @@ nginx_extra_conf_options: |
 
       autodiscover.lagabelle-saint-hilaire.fr 192.168.0.97:443;
       autoconfig.lagabelle-saint-hilaire.fr 192.168.0.97:443;
-      .zozoh.fr 192.168.0.97:443;
+
+      imap.zozoh.fr 192.168.0.33:443;
+      smtp.zozoh.fr 192.168.0.33:443;
+      mail.zozoh.fr 192.168.0.33:443;
+      autoconfig.zozoh.fr 192.168.0.33:443;
+      autodiscover.zozoh.fr 192.168.0.33:443;
+      autoconfig.lagabelle-saint-hilaire.fr 192.168.0.33:443;
+      autodiscover.lagabelle-saint-hilaire.fr 192.168.0.33:443;
     }
   
     server {
@@ -283,12 +290,12 @@ nginx_vhosts:
         proxy_pass http://192.168.0.161;
       }
   - listen: "80"
-    server_name: "zozoh.fr imap.zozoh.fr smtp.zozoh.fr postfix.zozoh.fr mail.zozoh.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr"
+    server_name: "imap.zozoh.fr smtp.zozoh.fr mail.zozoh.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr"
     extra_parameters: |
       location / {
         gzip                    off;
 
         {{ _nginx_proxy_headers | indent(8) }}
 
-        proxy_pass http://192.168.0.97;
+        proxy_pass http://192.168.0.33;
       }
