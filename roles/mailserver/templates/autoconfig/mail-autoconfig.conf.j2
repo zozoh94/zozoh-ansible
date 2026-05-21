@@ -1,0 +1,59 @@
+# Managed by Ansible — do not edit by hand.
+# Serves Thunderbird autoconfig + Outlook autodiscover XML for every domain
+# in mailserver_domains.
+
+map $host $autoconfig_cert {
+{% for d in mailserver_domains %}
+    ~*\.{{ d | regex_escape }}$  {{ d }};
+{% endfor %}
+    default {{ mailserver_domain }};
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name
+{% for d in mailserver_domains %}
+        autoconfig.{{ d }}
+        autodiscover.{{ d }}
+{% endfor %}
+    ;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name
+{% for d in mailserver_domains %}
+        autoconfig.{{ d }}
+        autodiscover.{{ d }}
+{% endfor %}
+    ;
+
+    ssl_certificate     /etc/letsencrypt/live/$autoconfig_cert/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$autoconfig_cert/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    access_log /var/log/nginx/autoconfig_access.log;
+    error_log  /var/log/nginx/autoconfig_error.log;
+
+    root /var/www/autoconfig/$host;
+
+    # Thunderbird
+    location = /mail/config-v1.1.xml {
+        default_type application/xml;
+    }
+
+    # Outlook (POX). nginx serves the static file for any HTTP method.
+    location = /autodiscover/autodiscover.xml {
+        default_type application/xml;
+    }
+    # Outlook capitalization variants — rewrite to the canonical path.
+    location ~* ^/Autodiscover/Autodiscover\.xml$ {
+        rewrite ^ /autodiscover/autodiscover.xml last;
+    }
+
+    location / { return 404; }
+}
