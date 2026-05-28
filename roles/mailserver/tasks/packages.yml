@@ -25,6 +25,9 @@
       - python3-psycopg2
       - python3-venv
       - procmail
+      # `acl` provides setfacl, needed by ansible's become-unprivileged-user
+      # flow (e.g. switching to the postgres user for community.postgresql.*).
+      - acl
     state: present
     update_cache: true
 
