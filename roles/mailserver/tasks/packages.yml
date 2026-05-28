@@ -31,20 +31,15 @@
     state: present
     update_cache: true
 
-- name: Create Python venv for OVH DNS automation
-  ansible.builtin.command:
-    cmd: python3 -m venv /opt/zozoh-mailserver-venv
-  args:
-    creates: /opt/zozoh-mailserver-venv/bin/python3
-  when: mailserver_ovh_dns_enabled
-  # ansible.builtin.command skips itself under --check; the pip task below
-  # also short-circuits, so the venv tasks are a real-run-only group.
-
-- name: Install ovh Python client into venv
+- name: Install ovh Python client into a managed venv
   ansible.builtin.pip:
     name: ovh
     state: present
     virtualenv: /opt/zozoh-mailserver-venv
+    # ansible.builtin.pip defaults virtualenv_command to the legacy `virtualenv`
+    # CLI (PyPI package, not installed here). Point it at the stdlib venv
+    # module so pip creates-or-reuses /opt/zozoh-mailserver-venv on its own.
+    virtualenv_command: /usr/bin/python3 -m venv
   when:
     - mailserver_ovh_dns_enabled
     - not ansible_check_mode
