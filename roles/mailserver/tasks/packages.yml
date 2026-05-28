@@ -23,7 +23,24 @@
       - python3-certbot-dns-ovh
       - nginx
       - python3-psycopg2
-      - python3-ovh
+      - python3-venv
       - procmail
     state: present
     update_cache: true
+
+- name: Create Python venv for OVH DNS automation
+  ansible.builtin.command:
+    cmd: python3 -m venv /opt/zozoh-mailserver-venv
+  args:
+    creates: /opt/zozoh-mailserver-venv/bin/python3
+  # Run even under --check so the next pip task can introspect the venv on
+  # dry runs. Creating an empty venv is harmless and idempotent.
+  check_mode: false
+  when: mailserver_ovh_dns_enabled
+
+- name: Install ovh Python client into venv
+  ansible.builtin.pip:
+    name: ovh
+    state: present
+    virtualenv: /opt/zozoh-mailserver-venv
+  when: mailserver_ovh_dns_enabled

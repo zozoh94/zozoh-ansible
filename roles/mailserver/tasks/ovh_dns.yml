@@ -1,6 +1,7 @@
 ---
 # OVH DNS automation - creates MX, SPF, DKIM, DMARC, and autoconfig records
-# Requires: pip install ovh (installed in packages.yml)
+# Requires the ovh Python client installed in /opt/zozoh-mailserver-venv
+# (provisioned by packages.yml).
 
 - name: Detect server public IP if not set
   ansible.builtin.uri:
@@ -22,7 +23,7 @@
 - name: Create OVH DNS records for each domain
   ansible.builtin.script:
     cmd: ovh_dns.py
-    executable: python3
+    executable: /opt/zozoh-mailserver-venv/bin/python3
   environment:
     OVH_ENDPOINT: "{{ mailserver_ovh_endpoint }}"
     OVH_APPLICATION_KEY: "{{ mailserver_ovh_application_key }}"
