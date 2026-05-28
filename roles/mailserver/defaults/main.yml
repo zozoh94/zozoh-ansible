@@ -118,7 +118,7 @@ mailserver_ovh_dns_replace_conflicts: false
 
 # DNS record values (auto-computed if not overridden)
 mailserver_dns_mx_priority: 10
-mailserver_dns_spf: "v=spf1 mx ~all"
+mailserver_dns_spf: "v=spf1 mx ip4:{{ _mailserver_public_ip }} ~all"
 mailserver_dns_dmarc: "v=DMARC1; p=quarantine; rua=mailto:{{ mailserver_admin_email }}; ruf=mailto:{{ mailserver_admin_email }}; sp=quarantine; ri=86400"
 
 # Server public IP for DNS A records (auto-detected if empty)

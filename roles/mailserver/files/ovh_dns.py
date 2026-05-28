@@ -129,6 +129,47 @@ def ensure_mx_record(client, zone, subdomain, target, priority):
     changed = True
 
 
+def ensure_singleton_txt_record(client, zone, subdomain, value, marker_prefix, ttl=3600):
+    """Ensure exactly one TXT record matching `marker_prefix` at `subdomain`.
+
+    Used for SPF (v=spf1) and DMARC (v=DMARC1) where the relevant RFCs mandate
+    a single record per name. Any other TXT starting with `marker_prefix` at
+    the same node is deleted; TXT records with different prefixes (e.g. SPF
+    coexists with DKIM and unrelated TXT) are left alone.
+    """
+    global changed
+    qualified = f"{subdomain}.{zone}" if subdomain else zone
+    new_target = f'"{value}"'
+
+    matching = None
+    stale = []
+    for rec in find_existing_record(client, zone, subdomain, "TXT"):
+        if rec["target"] == new_target:
+            matching = rec
+        elif rec["target"].startswith(f'"{marker_prefix}'):
+            stale.append(rec)
+
+    for rec in stale:
+        api_call_with_retry(client.delete, f"/domain/zone/{zone}/record/{rec['id']}")
+        print(f"  DELETED: TXT ({marker_prefix} duplicate) {qualified} -> {rec['target'][:60]}...")
+        changed = True
+
+    if matching:
+        print(f"  OK: TXT ({marker_prefix}) {qualified} -> {new_target[:60]}...")
+        return
+
+    api_call_with_retry(
+        client.post,
+        f"/domain/zone/{zone}/record",
+        fieldType="TXT",
+        subDomain=subdomain,
+        target=new_target,
+        ttl=ttl,
+    )
+    print(f"  CREATED: TXT ({marker_prefix}) {qualified} -> {new_target[:60]}...")
+    changed = True
+
+
 def ensure_cname_record(client, zone, subdomain, target, ttl=3600, replace_conflicts=False):
     """Ensure a CNAME record exists, handling RFC 2181 §10.1 "CNAME and other data".
 
@@ -269,8 +310,8 @@ def main():
             # MX record -> mx_host (never CNAME). Cross-zone targets are fine.
             ensure_mx_record(client, zone, subdomain, mx_host, mx_priority)
 
-            # SPF record
-            ensure_record(client, zone, subdomain, "TXT", f'"{spf}"')
+            # SPF record — singleton per RFC 7208 §3.2.
+            ensure_singleton_txt_record(client, zone, subdomain, spf, "v=spf1")
 
             # DKIM record
             dkim_value = read_dkim_public_key(domain, selector, key_dir)
@@ -280,11 +321,11 @@ def main():
                     dkim_subdomain = f"{dkim_subdomain}.{subdomain}"
                 ensure_record(client, zone, dkim_subdomain, "TXT", f'"{dkim_value}"')
 
-            # DMARC record
+            # DMARC record — singleton per RFC 7489 §6.6.3.
             dmarc_subdomain = "_dmarc"
             if subdomain:
                 dmarc_subdomain = f"_dmarc.{subdomain}"
-            ensure_record(client, zone, dmarc_subdomain, "TXT", f'"{dmarc}"')
+            ensure_singleton_txt_record(client, zone, dmarc_subdomain, dmarc, "v=DMARC1")
 
             # _domainkey base TXT record
             domainkey_subdomain = "_domainkey"
