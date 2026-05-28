@@ -23,13 +23,7 @@
       - python3-certbot-dns-ovh
       - nginx
       - python3-psycopg2
-      - python3-pip
+      - python3-ovh
       - procmail
     state: present
     update_cache: true
-
-- name: Install python3-ovh for DNS automation
-  ansible.builtin.pip:
-    name: ovh
-    state: present
-  when: mailserver_ovh_dns_enabled
