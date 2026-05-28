@@ -108,6 +108,13 @@ mailserver_ovh_endpoint: "ovh-eu"
 mailserver_ovh_application_key: ""
 mailserver_ovh_application_secret: ""
 mailserver_ovh_consumer_key: ""
+# When true, ovh_dns.py deletes any non-CNAME record (A, AAAA, TXT, MX, SRV)
+# that conflicts with a CNAME it wants to create at the same name. Default off:
+# the script raises a descriptive error and the play stops, so an operator
+# reviews the diff before any DNS rows are removed. Flip to true for a single
+# play to clean up legacy debris (e.g. apex-style A records left over from the
+# previous mail host), then revert to false to keep destructive ops opt-in.
+mailserver_ovh_dns_replace_conflicts: false
 
 # DNS record values (auto-computed if not overridden)
 mailserver_dns_mx_priority: 10

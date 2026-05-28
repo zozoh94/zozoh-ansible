@@ -129,6 +129,61 @@ def ensure_mx_record(client, zone, subdomain, target, priority):
     changed = True
 
 
+def ensure_cname_record(client, zone, subdomain, target, ttl=3600, replace_conflicts=False):
+    """Ensure a CNAME record exists, handling RFC 2181 §10.1 "CNAME and other data".
+
+    A CNAME cannot coexist with any other record type at the same node. If a
+    conflicting non-CNAME record sits where we want the CNAME, OVH rejects the
+    POST. When replace_conflicts=True we delete the offenders first; otherwise
+    we raise a descriptive error so the operator can intervene explicitly.
+    """
+    global changed
+    qualified = f"{subdomain}.{zone}" if subdomain else zone
+
+    # Fast path: if the wanted CNAME already exists with the right target, done.
+    existing_cnames = find_existing_record(client, zone, subdomain, "CNAME")
+    for rec in existing_cnames:
+        if rec["target"] == target:
+            print(f"  OK: CNAME {qualified} -> {target}")
+            return
+
+    # Detect conflicting record types at the same name (A, AAAA, TXT, MX, SRV).
+    # NS and DNSSEC sigs are managed by OVH itself; skip those.
+    conflicting = []
+    for ftype in ("A", "AAAA", "TXT", "MX", "SRV"):
+        conflicting.extend(
+            (ftype, rec) for rec in find_existing_record(client, zone, subdomain, ftype)
+        )
+
+    if conflicting and not replace_conflicts:
+        names = ", ".join(f"{ft} (id={rec['id']})" for ft, rec in conflicting)
+        raise RuntimeError(
+            f"{qualified}: cannot create CNAME -> {target}, conflicting records "
+            f"exist: {names}. Set OVH_DNS_REPLACE_CONFLICTS=1 to delete them."
+        )
+
+    # replace_conflicts=True: delete offending records, then any wrong-target CNAME.
+    for ftype, rec in conflicting:
+        api_call_with_retry(client.delete, f"/domain/zone/{zone}/record/{rec['id']}")
+        print(f"  DELETED: {ftype} {qualified} (conflict with CNAME -> {target})")
+        changed = True
+    for rec in existing_cnames:
+        api_call_with_retry(client.delete, f"/domain/zone/{zone}/record/{rec['id']}")
+        print(f"  DELETED: CNAME {qualified} -> {rec['target']} (replacing)")
+        changed = True
+
+    api_call_with_retry(
+        client.post,
+        f"/domain/zone/{zone}/record",
+        fieldType="CNAME",
+        subDomain=subdomain,
+        target=target,
+        ttl=ttl,
+    )
+    print(f"  CREATED: CNAME {qualified} -> {target}")
+    changed = True
+
+
 def ensure_srv_record(client, zone, subdomain, priority, weight, port, target, ttl=3600):
     """Ensure an SRV record exists. RFC 2782 format: 'priority weight port target.'.
     Negative record per RFC 6186: priority=0, weight=0, port=0, target='.' (single dot)."""
@@ -183,6 +238,7 @@ def main():
     dmarc = os.environ["DNS_DMARC"]
     mx_priority = int(os.environ["DNS_MX_PRIORITY"])
     tlsa_hash = os.environ.get("TLSA_HASH", "")
+    replace_conflicts = os.environ.get("OVH_DNS_REPLACE_CONFLICTS", "").lower() in ("1", "true", "yes")
 
     errors = []
 
@@ -240,20 +296,18 @@ def main():
                 f'"o=-; r={admin_email}"',
             )
 
-            # smtp/imap CNAME aliases
-            for alias in ("smtp", "imap"):
+            # smtp/imap/autoconfig/autodiscover CNAME aliases.
+            # ensure_cname_record handles RFC 2181 §10.1 "CNAME and other data":
+            # if a legacy A/TXT/etc. sits at the same name, replace_conflicts=True
+            # (env: OVH_DNS_REPLACE_CONFLICTS=1) deletes it before creating the CNAME.
+            for alias in ("smtp", "imap", "autoconfig", "autodiscover"):
                 alias_subdomain = alias
                 if subdomain:
                     alias_subdomain = f"{alias}.{subdomain}"
-                ensure_record(client, zone, alias_subdomain, "CNAME", f"{hostname}.")
-
-            # Autoconfig / Autodiscover CNAMEs — both point at the mail host so
-            # nginx can serve per-Host XML files for Thunderbird and Outlook.
-            for alias in ("autoconfig", "autodiscover"):
-                alias_subdomain = alias
-                if subdomain:
-                    alias_subdomain = f"{alias}.{subdomain}"
-                ensure_record(client, zone, alias_subdomain, "CNAME", f"{hostname}.")
+                ensure_cname_record(
+                    client, zone, alias_subdomain, f"{hostname}.",
+                    replace_conflicts=replace_conflicts,
+                )
 
             # RFC 6186 SRV records — modern clients (Thunderbird, Apple Mail,
             # K-9) use these instead of the HTTP discovery URLs.

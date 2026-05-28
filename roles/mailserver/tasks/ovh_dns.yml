@@ -41,6 +41,7 @@
     DNS_MX_PRIORITY: "{{ mailserver_dns_mx_priority }}"
     ADMIN_EMAIL: "{{ mailserver_admin_email }}"
     TLSA_HASH: "{{ mailserver_tlsa_hash | default('') }}"
+    OVH_DNS_REPLACE_CONFLICTS: "{{ '1' if mailserver_ovh_dns_replace_conflicts else '0' }}"
   register: ovh_dns_result
   changed_when: "'CHANGED' in ovh_dns_result.stdout"
 
