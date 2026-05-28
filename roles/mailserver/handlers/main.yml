@@ -26,7 +26,7 @@
 
 - name: Restart spamassassin
   ansible.builtin.service:
-    name: spamassassin
+    name: spamd
     state: restarted
 
 - name: Restart postgresql

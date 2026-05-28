@@ -10,13 +10,16 @@
 
 - name: Configure SpamAssassin defaults
   ansible.builtin.lineinfile:
-    path: /etc/default/spamassassin
+    path: /etc/default/spamd
     regexp: "^OPTIONS="
     line: 'OPTIONS="--create-prefs --max-children {{ mailserver_spamassassin_max_children }} --helper-home-dir"'
   notify: Restart spamassassin
 
-- name: Configure SpamAssassin cron updates
-  ansible.builtin.lineinfile:
-    path: /etc/default/spamassassin
-    regexp: "^CRON="
-    line: "CRON={{ '1' if mailserver_spamassassin_cron_update else '0' }}"
+# Debian 12 moved daily rule updates from the /etc/default/spamassassin CRON=
+# toggle to a systemd timer. mailserver_spamassassin_cron_update keeps its
+# original name but now toggles the timer's state.
+- name: Toggle spamassassin-maintenance.timer for daily rule updates
+  ansible.builtin.systemd:
+    name: spamassassin-maintenance.timer
+    enabled: "{{ mailserver_spamassassin_cron_update }}"
+    state: "{{ 'started' if mailserver_spamassassin_cron_update else 'stopped' }}"

@@ -31,6 +31,6 @@
 
 - name: Enable and start SpamAssassin
   ansible.builtin.service:
-    name: spamassassin
+    name: spamd
     state: started
     enabled: true
