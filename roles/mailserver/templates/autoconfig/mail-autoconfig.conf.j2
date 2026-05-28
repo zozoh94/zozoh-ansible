@@ -33,8 +33,14 @@ server {
 
     ssl_certificate     /etc/letsencrypt/live/$autoconfig_cert/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$autoconfig_cert/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    # Mozilla intermediate profile inlined: we use certbot's dns-ovh plugin,
+    # which (unlike the nginx plugin) does not drop helper files into
+    # /etc/letsencrypt/options-ssl-nginx.conf. No DHE ciphers → no dhparam.
+    ssl_session_cache   shared:autoconfig_SSL:1m;
+    ssl_session_timeout 60m;
+    ssl_session_tickets off;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
 
     access_log /var/log/nginx/autoconfig_access.log;
     error_log  /var/log/nginx/autoconfig_error.log;
