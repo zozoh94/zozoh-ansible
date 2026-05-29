@@ -56,8 +56,8 @@ check_cert() {
   fi
 }
 
-# Service checks
-for svc in postfix dovecot opendkim opendmarc spamassassin fail2ban; do
+# Service checks. Debian 12 renamed the SpamAssassin daemon unit to spamd.
+for svc in postfix dovecot opendkim opendmarc spamd fail2ban; do
   check_service "$svc"
 done
 
