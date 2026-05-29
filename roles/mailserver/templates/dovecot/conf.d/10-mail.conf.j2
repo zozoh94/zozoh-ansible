@@ -12,3 +12,11 @@ first_valid_uid = {{ mailserver_vmail_uid }}
 last_valid_uid = {{ mailserver_vmail_uid }}
 
 mail_privileged_group = vmail
+
+{% if mailserver_quota_enabled %}
+# Global base plugin set. Declared here (10-) so it is in effect before the
+# protocol filters in 20-lmtp.conf load — otherwise dovecot warns that this
+# global won't reach the earlier lmtp filter. Per-protocol additions (sieve,
+# imap_quota) are layered on top in their own files.
+mail_plugins = $mail_plugins quota
+{% endif %}

@@ -1,4 +1,6 @@
 protocol lmtp {
   postmaster_address = postmaster@{{ mailserver_domain }}
+  # quota is inherited from the global mail_plugins set in 10-mail.conf (loaded
+  # before this filter), so we only add the lmtp-specific sieve plugin here.
   mail_plugins = $mail_plugins sieve
 }

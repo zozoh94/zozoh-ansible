@@ -1,5 +1,7 @@
 # {{ ansible_managed }}
-mail_plugins = $mail_plugins quota
+# The global `mail_plugins = $mail_plugins quota` lives in 10-mail.conf so it
+# loads before the protocol filters (see comment there). This file only holds
+# the quota plugin configuration and the imap-specific addition.
 
 plugin {
   quota = maildir:User quota
