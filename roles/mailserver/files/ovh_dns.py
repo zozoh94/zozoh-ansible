@@ -239,21 +239,45 @@ def ensure_cname_record(client, zone, subdomain, target, ttl=3600, replace_confl
 
 
 def ensure_srv_record(client, zone, subdomain, priority, weight, port, target, ttl=3600):
-    """Ensure an SRV record exists. RFC 2782 format: 'priority weight port target.'.
-    Negative record per RFC 6186: priority=0, weight=0, port=0, target='.' (single dot)."""
+    """Ensure exactly one SRV record at `subdomain` with the given value.
+
+    The service names this role manages (_imaps, _submission, _autodiscover and
+    the negative _imap/_pop3/_pop3s) are treated as role-owned singletons: any
+    same-name SRV with a different value is deleted, so a repointed target or a
+    stale legacy record cannot linger as a duplicate (e.g. an old
+    _autodiscover._tcp pointing at a now-CNAME host, which is illegal per
+    RFC 2782). Negative record per RFC 6186: target='.' -> '0 0 0 .'.
+    """
     global changed
+    qualified = f"{subdomain}.{zone}" if subdomain else zone
     if target == ".":
         srv_target = "0 0 0 ."
     else:
         srv_target = f"{priority} {weight} {port} {target}."
-    existing = find_existing_record(client, zone, subdomain, "SRV")
-    for rec in existing:
-        if rec["target"] == srv_target:
-            print(f"  OK: SRV {subdomain}.{zone} -> {srv_target}")
-            return
-        # An SRV with the same name but different value: leave it alone and
-        # log; if the user has an override they keep it. Idempotency favors
-        # not deleting records we did not create.
+
+    # Compare tolerant of a trailing dot on the target hostname, since OVH may
+    # return it with or without one.
+    def _norm(t):
+        return t.strip().rstrip(".").strip()
+
+    want = _norm(srv_target)
+    matching = None
+    stale = []
+    for rec in find_existing_record(client, zone, subdomain, "SRV"):
+        if _norm(rec["target"]) == want:
+            matching = rec
+        else:
+            stale.append(rec)
+
+    for rec in stale:
+        api_call_with_retry(client.delete, f"/domain/zone/{zone}/record/{rec['id']}")
+        print(f"  DELETED: SRV {qualified} -> {rec['target']} (stale)")
+        changed = True
+
+    if matching:
+        print(f"  OK: SRV {qualified} -> {srv_target}")
+        return
+
     api_call_with_retry(
         client.post,
         f"/domain/zone/{zone}/record",
@@ -262,7 +286,7 @@ def ensure_srv_record(client, zone, subdomain, priority, weight, port, target, t
         target=srv_target,
         ttl=ttl,
     )
-    print(f"  CREATED: SRV {subdomain}.{zone} -> {srv_target}")
+    print(f"  CREATED: SRV {qualified} -> {srv_target}")
     changed = True
 
 
@@ -375,6 +399,13 @@ def main():
                               0, 1, 993, srv_target_host)
             ensure_srv_record(client, zone, srv_sub("_submission._tcp"),
                               0, 1, 587, srv_target_host)
+            # Outlook autodiscover-over-SRV fallback. Target must be a real A
+            # record (RFC 2782 forbids CNAME), so point it at srv_target_host
+            # (mail.<primary_domain>) on 443, which nginx serves autodiscover
+            # XML for. Replaces any legacy _autodiscover SRV that targeted the
+            # now-CNAME autoconfig.<domain> (the "is a CNAME (illegal)" error).
+            ensure_srv_record(client, zone, srv_sub("_autodiscover._tcp"),
+                              0, 0, 443, srv_target_host)
             # Negative: explicitly tell clients NOT to use these protocols.
             for negative in ("_imap._tcp", "_pop3._tcp", "_pop3s._tcp"):
                 ensure_srv_record(client, zone, srv_sub(negative),

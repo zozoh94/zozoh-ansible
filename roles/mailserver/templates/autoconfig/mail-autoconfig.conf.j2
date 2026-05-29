@@ -17,6 +17,7 @@ server {
         autoconfig.{{ d }}
         autodiscover.{{ d }}
 {% endfor %}
+        {{ mailserver_autoconfig_advertised_host }}
     ;
     return 301 https://$host$request_uri;
 }
@@ -29,6 +30,7 @@ server {
         autoconfig.{{ d }}
         autodiscover.{{ d }}
 {% endfor %}
+        {{ mailserver_autoconfig_advertised_host }}
     ;
 
     ssl_certificate     /etc/letsencrypt/live/$autoconfig_cert/fullchain.pem;

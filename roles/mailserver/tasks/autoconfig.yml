@@ -44,6 +44,26 @@
     mode: "0644"
   loop: "{{ mailserver_domains }}"
 
+# Outlook's _autodiscover._tcp SRV fallback points at mailserver_autoconfig_advertised_host
+# (mail.<primary_domain>), so nginx must serve autodiscover.xml for that host too.
+# The XML is domain-independent (it only advertises the advertised host), so one
+# copy at the mail-host webroot covers every tenant.
+- name: Create mail-host autodiscover webroot
+  ansible.builtin.file:
+    path: "/var/www/autoconfig/{{ mailserver_autoconfig_advertised_host }}/autodiscover"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Render Outlook autodiscover XML for the mail host (SRV target)
+  ansible.builtin.template:
+    src: autoconfig/autodiscover.xml.j2
+    dest: "/var/www/autoconfig/{{ mailserver_autoconfig_advertised_host }}/autodiscover/autodiscover.xml"
+    owner: root
+    group: root
+    mode: "0644"
+
 - name: Render nginx autoconfig vhost
   ansible.builtin.template:
     src: autoconfig/mail-autoconfig.conf.j2
