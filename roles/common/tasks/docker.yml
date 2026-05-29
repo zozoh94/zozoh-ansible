@@ -19,6 +19,9 @@
     name:
       - docker-ce
       - docker-compose-plugin
+      # Docker SDK for Python (community.docker.docker_login etc.). Debian
+      # packages it; pip install is blocked by PEP 668 on Debian 12.
+      - python3-docker
     state: latest
 
 - name: Add remote user to docker group
@@ -43,12 +46,3 @@
     password: "{{ registry_zozoh_password }}"
     reauthorize: yes
   when: docker_registry_login
-
-- name: Install pip
-  apt:
-    name: python3-pip
-    state: latest
-    
-- name: Install Docker Module for Python
-  pip:
-    name: docker
