@@ -141,12 +141,25 @@ def ensure_singleton_txt_record(client, zone, subdomain, value, marker_prefix, t
     qualified = f"{subdomain}.{zone}" if subdomain else zone
     new_target = f'"{value}"'
 
+    # OVH returns TXT targets WITHOUT surrounding quotes, but accepts them with
+    # quotes on POST. Normalize both sides (strip one layer of wrapping quotes
+    # and surrounding whitespace) so comparison and prefix matching are robust
+    # regardless of how a given record was stored.
+    def _norm(t):
+        t = t.strip()
+        if len(t) >= 2 and t[0] == '"' and t[-1] == '"':
+            t = t[1:-1]
+        return t
+
+    want = _norm(new_target)
+
     matching = None
     stale = []
     for rec in find_existing_record(client, zone, subdomain, "TXT"):
-        if rec["target"] == new_target:
+        rec_value = _norm(rec["target"])
+        if rec_value == want:
             matching = rec
-        elif rec["target"].startswith(f'"{marker_prefix}'):
+        elif rec_value.startswith(marker_prefix):
             stale.append(rec)
 
     for rec in stale:
