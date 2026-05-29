@@ -160,6 +160,10 @@ mailserver_autoconfig_enabled: true
 # the mail services use. Default = mail.<primary_domain>, which the per-domain
 # wildcard cert covers.
 mailserver_autoconfig_advertised_host: "mail.{{ mailserver_domain }}"
+# Inbound 443 reaches the autoconfig nginx via the front proxy, which forwards
+# with the PROXY protocol (stream: ssl_preread + proxy_protocol). Trust that
+# source for real_ip recovery. Defaults to the private LAN the proxy sits on.
+mailserver_proxy_protocol_trusted_cidr: "192.168.0.0/16"
 
 # ─── Certbot challenge ─────────────────────────────────────────────────────────
 # 'standalone' = legacy HTTP-01 path (port 80, must be free).

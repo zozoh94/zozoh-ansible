@@ -1,13 +1,16 @@
 # Managed by Ansible — do not edit by hand.
 # Serves Thunderbird autoconfig + Outlook autodiscover XML for every domain
-# in mailserver_domains.
-
-map $host $autoconfig_cert {
-{% for d in mailserver_domains %}
-    ~*\.{{ d | regex_escape }}$  {{ d }};
-{% endfor %}
-    default {{ mailserver_domain }};
-}
+# in mailserver_domains, plus the mail host (Outlook _autodiscover SRV target).
+#
+# One HTTPS server block per domain with STATIC cert paths: nginx must load
+# certs at startup as root, because /etc/letsencrypt/{live,archive} are 0700
+# root and the workers run unprivileged. A $variable in ssl_certificate would
+# defer loading to the worker and fail with a TLS "internal error".
+#
+# Inbound 443 arrives from the front proxy, which uses `ssl_preread on;
+# proxy_protocol on;` — so we listen with proxy_protocol and recover the real
+# client IP from the PROXY header. Port 80 is plain HTTP-proxied (no PROXY
+# header) and only issues the HTTPS redirect.
 
 server {
     listen 80;
@@ -22,27 +25,32 @@ server {
     return 301 https://$host$request_uri;
 }
 
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name
 {% for d in mailserver_domains %}
+server {
+    listen 443 ssl http2 proxy_protocol;
+    listen [::]:443 ssl http2 proxy_protocol;
+    server_name
         autoconfig.{{ d }}
         autodiscover.{{ d }}
-{% endfor %}
+{% if d == mailserver_domain %}
         {{ mailserver_autoconfig_advertised_host }}
+{% endif %}
     ;
 
-    ssl_certificate     /etc/letsencrypt/live/$autoconfig_cert/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/$autoconfig_cert/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/{{ d }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ d }}/privkey.pem;
     # Mozilla intermediate profile inlined: we use certbot's dns-ovh plugin,
     # which (unlike the nginx plugin) does not drop helper files into
     # /etc/letsencrypt/options-ssl-nginx.conf. No DHE ciphers → no dhparam.
-    ssl_session_cache   shared:autoconfig_SSL:1m;
+    ssl_session_cache   shared:autoconfig_{{ loop.index }}:1m;
     ssl_session_timeout 60m;
     ssl_session_tickets off;
     ssl_protocols       TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
+
+    # Real client IP from the front proxy's PROXY protocol header.
+    set_real_ip_from {{ mailserver_proxy_protocol_trusted_cidr }};
+    real_ip_header proxy_protocol;
 
     access_log /var/log/nginx/autoconfig_access.log;
     error_log  /var/log/nginx/autoconfig_error.log;
@@ -65,3 +73,4 @@ server {
 
     location / { return 404; }
 }
+{% endfor %}
