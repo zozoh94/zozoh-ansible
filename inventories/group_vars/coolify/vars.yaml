@@ -1,0 +1,12 @@
+---
+private_network: "192.168.0.192/27"
+admin_network: "192.168.1.192/27"
+
+group_hosts:
+  coolify.ovh.zozoh.fr: 192.168.0.193
+
+# Coolify dashboard domain (fronted by proxy1, TLS terminated by Coolify Traefik)
+coolify_domain: coolify.zozoh.fr
+
+# proxy1 — the only host trusted to send the PROXY protocol header on :443
+reverse_proxy_ip: 192.168.0.225
