@@ -1,0 +1,11 @@
+---
+- hosts: coolify
+  become: yes
+  vars:
+    install_docker: true
+    docker_registry_login: false
+    sshd_listen: "{{ ansible_all_ipv4_addresses | ansible.netcommon.ipaddr(admin_network) | first }}"
+
+  roles:
+    - common
+    - coolify
