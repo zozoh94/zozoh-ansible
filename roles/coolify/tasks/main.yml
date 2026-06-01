@@ -1,0 +1,4 @@
+---
+- name: Include coolify tasks
+  ansible.builtin.include_tasks: tasks.yml
+  when: not role_coolify_played

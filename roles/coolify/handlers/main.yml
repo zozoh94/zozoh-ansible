@@ -1,0 +1,7 @@
+---
+- name: Restart coolify proxy
+  become: yes
+  community.docker.docker_compose_v2:
+    project_src: "{{ coolify_proxy_dir }}"
+    state: present
+    recreate: always

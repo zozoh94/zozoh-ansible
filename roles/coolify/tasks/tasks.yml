@@ -1,0 +1,4 @@
+---
+- name: Role coolify played
+  ansible.builtin.set_fact:
+    role_coolify_played: true
