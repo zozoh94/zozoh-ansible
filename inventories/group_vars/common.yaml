@@ -3,7 +3,13 @@ private_network: "192.168.0.224/27"
 admin_network: "192.168.1.224/27"
 
 group_hosts:
-  gitlab.ovh.zozoh.fr: 192.168.0.66
+  gitlab: 192.168.0.66
+  proxmox: 192.168.0.254
+  mail: 192.168.0.33
+  vaultwarden: 192.168.0.161
+  cloud: 192.168.0.98
+  lagabelle-saint-hilaire: 192.168.0.129
+  coolify: 192.168.0.193
 
 certbot_certs:
   - domains:
@@ -44,21 +50,33 @@ _nginx_proxy_cache: |
 nginx_package_name: "nginx-extras"
 nginx_listen_ipv6: false
 nginx_upstreams:
+  - name: proxmox
+    servers:
+      - "proxmox:80"
   - name: gitlab
     servers:
       - "gitlab:80 fail_timeout=0"
   - name: gitlab_registry
     servers:
       - "gitlab:5678"
-  - name: legacy
-    servers:
-      - "192.168.0.97:443"
   - name: lagabelle-saint-hilaire
     servers:
-      - "192.168.0.129:8000"
+      - "lagabelle-saint-hilaire:8000"
   - name: lagabelle-saint-hilaire_media
     servers:
-      - "192.168.0.129:8001"
+      - "lagabelle-saint-hilaire:8001"
+  - name: cloud
+    servers:
+      - "cloud:80"
+  - name: vaultwarden
+    servers:
+      - "vaultwarden:80"
+  - name: mail
+    servers:
+      - "mail:80"
+  - name: coolify
+    servers:
+      - "coolify:80"
 nginx_extra_http_options: |
   fastcgi_cache_path /var/cache/nginx_cgi levels=1:2 keys_zone=cgi:10m inactive=1h max_size=1g;
   
@@ -74,11 +92,12 @@ nginx_extra_conf_options: |
 
     map $ssl_preread_server_name $targetBackend {
       hostnames;
-      
+     
       gitlab.zozoh.fr 127.0.0.1:4443;
       registry.zozoh.fr 127.0.0.1:4443;
       pages.zozoh.fr 127.0.0.1:4443;
       enzo.pages.zozoh.fr 127.0.0.1:4443;
+
       lagabelle-saint-hilaire.fr 127.0.0.1:4443;
       media.lagabelle-saint-hilaire.fr 127.0.0.1:4443;
       
@@ -87,16 +106,15 @@ nginx_extra_conf_options: |
 
       vaultwarden.zozoh.fr 192.168.0.161:443;
 
-      autodiscover.lagabelle-saint-hilaire.fr 192.168.0.97:443;
-      autoconfig.lagabelle-saint-hilaire.fr 192.168.0.97:443;
-
-      imap.zozoh.fr 192.168.0.33:443;
-      smtp.zozoh.fr 192.168.0.33:443;
       mail.zozoh.fr 192.168.0.33:443;
+
       autoconfig.zozoh.fr 192.168.0.33:443;
       autodiscover.zozoh.fr 192.168.0.33:443;
       autoconfig.lagabelle-saint-hilaire.fr 192.168.0.33:443;
       autodiscover.lagabelle-saint-hilaire.fr 192.168.0.33:443;
+
+      coolify.zozoh.fr 192.168.0.193:443;
+      *.zozoh.fr 192.168.0.193:443;
     }
   
     server {
@@ -117,7 +135,7 @@ nginx_vhosts:
 
         {{ _nginx_proxy_headers | indent(8) }}
 
-        proxy_pass http://192.168.0.254;
+        proxy_pass http://proxmox;
       }
   - listen: "80"
     server_name: "gitlab.zozoh.fr"
@@ -276,7 +294,7 @@ nginx_vhosts:
 
         {{ _nginx_proxy_headers | indent(8) }}
 
-        proxy_pass http://192.168.0.98;
+        proxy_pass http://cloud;
       }
   - listen: "80"
     server_name: "vaultwarden.zozoh.fr"
@@ -287,15 +305,26 @@ nginx_vhosts:
 
         {{ _nginx_proxy_headers | indent(8) }}
 
-        proxy_pass http://192.168.0.161;
+        proxy_pass http://vaultwarden;
       }
   - listen: "80"
-    server_name: "imap.zozoh.fr smtp.zozoh.fr mail.zozoh.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr"
+    server_name: "mail.zozoh.fr autoconfig.zozoh.fr autodiscover.zozoh.fr autoconfig.lagabelle-saint-hilaire.fr autodiscover.lagabelle-saint-hilaire.fr"
     extra_parameters: |
       location / {
         gzip                    off;
 
         {{ _nginx_proxy_headers | indent(8) }}
 
-        proxy_pass http://192.168.0.33;
+        proxy_pass http://mail;
+      }
+  - listen: "80"
+    server_name: "coolify.zozoh.fr *.zozoh.fr"
+    filename: "coolify.zozoh.fr-80.conf"
+    extra_parameters: |
+      location / {
+        gzip                    off;
+
+        {{ _nginx_proxy_headers | indent(8) }}
+
+        proxy_pass http://coolify;
       }
