@@ -1,4 +1,49 @@
 ---
+# ── Install Coolify (official installer, idempotent) ─────────────
+
+- name: Download Coolify install script
+  ansible.builtin.get_url:
+    url: "{{ coolify_install_url }}"
+    dest: /opt/coolify-install.sh
+    mode: "0755"
+
+- name: Run Coolify installer
+  ansible.builtin.command: bash /opt/coolify-install.sh
+  args:
+    creates: "{{ coolify_source_compose }}"
+  register: coolify_install
+  # The installer is non-interactive when stdin is not a TTY (Ansible).
+
+- name: Wait for Coolify proxy compose to be generated
+  ansible.builtin.stat:
+    path: "{{ coolify_proxy_compose }}"
+  register: coolify_proxy_stat
+  until: coolify_proxy_stat.stat.exists
+  retries: 30
+  delay: 5
+
+# ── Trust proxy1's PROXY protocol on the https (:443) entrypoint ──
+# proxy1's shared stream server sends `proxy_protocol on` to every passthrough
+# backend, so Coolify's Traefik must accept it on :443. These edits are
+# idempotent (the line regexp prevents duplicates) and re-applied on every run
+# in case Coolify regenerated the compose from its UI.
+
+- name: Trust PROXY protocol from proxy1 on https entrypoint
+  ansible.builtin.lineinfile:
+    path: "{{ coolify_proxy_compose }}"
+    insertafter: "--entrypoints\\.https\\.address=:443"
+    regexp: "--entrypoints\\.https\\.proxyProtocol\\.trustedIPs="
+    line: "      - '--entrypoints.https.proxyProtocol.trustedIPs={{ reverse_proxy_ip }}'"
+  notify: Restart coolify proxy
+
+- name: Trust forwarded headers from proxy1 on https entrypoint
+  ansible.builtin.lineinfile:
+    path: "{{ coolify_proxy_compose }}"
+    insertafter: "--entrypoints\\.https\\.address=:443"
+    regexp: "--entrypoints\\.https\\.forwardedHeaders\\.trustedIPs="
+    line: "      - '--entrypoints.https.forwardedHeaders.trustedIPs={{ reverse_proxy_ip }}'"
+  notify: Restart coolify proxy
+
 - name: Role coolify played
   ansible.builtin.set_fact:
     role_coolify_played: true
