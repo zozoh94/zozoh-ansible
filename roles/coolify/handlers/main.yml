@@ -5,3 +5,15 @@
     project_src: "{{ coolify_proxy_dir }}"
     state: present
     recreate: always
+
+- name: Restart dnsmasq
+  become: yes
+  ansible.builtin.service:
+    name: dnsmasq
+    state: restarted
+
+- name: Restart docker
+  become: yes
+  ansible.builtin.service:
+    name: docker
+    state: restarted

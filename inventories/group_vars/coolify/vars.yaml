@@ -10,3 +10,9 @@ coolify_domain: coolify.zozoh.fr
 
 # proxy1 — the only host trusted to send the PROXY protocol header on :443
 reverse_proxy_ip: 192.168.0.225
+
+# Mail relay. Public DNS points smtp.zozoh.fr at proxy1, which does not forward
+# 587; containers must resolve it to the mail server's private IP so delivery
+# uses the internal network while STARTTLS SNI still matches the public cert.
+coolify_smtp_host: smtp.zozoh.fr
+coolify_smtp_ip: 192.168.0.33

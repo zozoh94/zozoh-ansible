@@ -1,4 +1,15 @@
 ---
+
+- name: Listen SSH for admin
+  become: yes
+  lineinfile:
+    path: "/etc/ssh/sshd_config"
+    regexp: ".*PermitRootLogin .+"    
+    line: "PermitRootLogin prohibit-password"
+    state: present
+  notify:
+    - Restart sshd
+
 # ── Install Coolify (official installer, idempotent) ─────────────
 
 - name: Download Coolify install script
@@ -43,6 +54,59 @@
     regexp: "--entrypoints\\.https\\.forwardedHeaders\\.trustedIPs="
     line: "      - '--entrypoints.https.forwardedHeaders.trustedIPs={{ reverse_proxy_ip }}'"
   notify: Restart coolify proxy
+
+# ── SMTP egress: resolve smtp.zozoh.fr to the mail server's private IP ──
+# Docker's embedded DNS does not read the host's /etc/hosts, and Coolify
+# regenerates container compose files, so per-container extra_hosts do not
+# stick. Instead run dnsmasq on the host with the override and point the Docker
+# daemon's DNS at it — every container (Coolify itself + deployed apps) then
+# resolves smtp.zozoh.fr to the internal mail server.
+
+- name: Determine coolify private IP
+  ansible.builtin.set_fact:
+    coolify_private_ip: "{{ ansible_all_ipv4_addresses | ansible.netcommon.ipaddr(private_network) | first }}"
+
+- name: Install dnsmasq (host resolver for container SMTP override)
+  ansible.builtin.apt:
+    name: dnsmasq
+    state: present
+
+- name: Configure dnsmasq smtp.zozoh.fr override
+  ansible.builtin.copy:
+    dest: /etc/dnsmasq.d/coolify-smtp.conf
+    mode: "0644"
+    content: |
+      # Managed by Ansible (coolify role) — do not edit manually.
+      # Resolve {{ coolify_smtp_host }} to the mail server's private IP so
+      # containers deliver mail over the internal network while STARTTLS SNI
+      # still matches the public cert. Public DNS points it at proxy1, which
+      # does not forward 587.
+      bind-interfaces
+      listen-address={{ coolify_private_ip }}
+      host-record={{ coolify_smtp_host }},{{ coolify_smtp_ip }}
+  notify: Restart dnsmasq
+
+- name: Ensure dnsmasq is started and enabled
+  ansible.builtin.service:
+    name: dnsmasq
+    state: started
+    enabled: true
+
+- name: Read existing Docker daemon.json (created by Coolify installer)
+  ansible.builtin.slurp:
+    path: /etc/docker/daemon.json
+  register: coolify_daemon_json_raw
+  failed_when: false
+
+- name: Merge container DNS into Docker daemon.json
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    content: >-
+      {{ ((coolify_daemon_json_raw.content | b64decode | from_json)
+          if (coolify_daemon_json_raw.content is defined) else {})
+         | combine({'dns': [coolify_private_ip]}) | to_nice_json }}
+  notify: Restart docker
 
 - name: Role coolify played
   ansible.builtin.set_fact:
