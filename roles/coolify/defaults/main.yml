@@ -4,10 +4,5 @@ role_coolify_played: false
 # Official Coolify installer
 coolify_install_url: "https://cdn.coollabs.io/coolify/install.sh"
 
-# Paths created by the Coolify installer
-coolify_base_dir: /data/coolify
+# Path created by the Coolify installer (guards the idempotent install step)
 coolify_source_compose: /data/coolify/source/docker-compose.yml
-coolify_proxy_dir: /data/coolify/proxy
-coolify_proxy_compose: /data/coolify/proxy/docker-compose.yml
-
-# reverse_proxy_ip comes from group_vars/coolify/vars.yaml
