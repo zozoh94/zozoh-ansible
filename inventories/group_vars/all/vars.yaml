@@ -7,7 +7,10 @@ admin_email: enzo@zozoh.fr
 # Use this for service names whose public DNS doesn't reach the private network
 # (e.g. smtp.zozoh.fr resolves to the proxy public IP which doesn't forward 587).
 global_hosts:
-  smtp.zozoh.fr: 192.168.0.97
+  smtp.zozoh.fr: 192.168.0.33
+  imap.zozoh.fr: 192.168.0.33
+  autodiscover.zozoh.fr: 192.168.0.33
+  autoconfig.zozoh.fr: 192.168.0.33
 
 common_tools:
   - curl

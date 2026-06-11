@@ -6,36 +6,40 @@ all:
         common_proxy:
           hosts:
             proxy1.ovh.zozoh.fr:
-              proxmox_vmid: 108
+              proxmox_vmid: 202
     nextcloud:
       children:
         nextcloud_web:
           hosts:
             nextcloud.ovh.zozoh.fr:
-              proxmox_vmid: 114
+              proxmox_vmid: 206
     gitlab:
       children:
         gitlab_webserver:
           hosts:
             gitlab.ovh.zozoh.fr:
-              proxmox_vmid: 109
+              proxmox_vmid: 203
         gitlab_runner:
           hosts:
             gitlab-runner1.ovh.zozoh.fr:
-              proxmox_vmid: 110
+              proxmox_vmid: 204
     vaultwarden:
       children:
         vaultwarden_web:
           hosts:
             vaultwarden.ovh.zozoh.fr:
-              proxmox_vmid: 115
+              proxmox_vmid: 207
     lagabelle:
       children:
         lagabelle_web:
           hosts:
             web.lagabelle.ovh.zozoh.fr:
-              proxmox_vmid: 113
+              proxmox_vmid: 205
     mailserver:
       hosts:
         mailserver.ovh.zozoh.fr:
-          proxmox_vmid: 101
+          proxmox_vmid: 201
+    coolify:
+      hosts:
+        coolify.ovh.zozoh.fr:
+          proxmox_vmid: 208

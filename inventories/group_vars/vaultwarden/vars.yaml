@@ -24,7 +24,7 @@ vaultwarden_data_dir: /opt/vaultwarden
 vaultwarden_smtp_host: smtp.zozoh.fr
 # Private IP for smtp.zozoh.fr (DNS resolves to the public proxy IP which doesn't forward 587;
 # pushed into the container's /etc/hosts via extra_hosts so STARTTLS SNI still matches the cert).
-vaultwarden_smtp_host_ip: 192.168.0.97
+vaultwarden_smtp_host_ip: 192.168.0.33
 vaultwarden_smtp_port: 587
 vaultwarden_smtp_security: starttls
 vaultwarden_smtp_username: vaultwarden@zozoh.fr

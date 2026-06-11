@@ -127,6 +127,7 @@ nginx_extra_conf_options: |
   }
 nginx_proxy_cache_path: "/var/cache/nginx_reverse levels=1:2 keys_zone=reverse:10m max_size=10g inactive=60m"
 nginx_vhosts:
+  # For ssl certbot purpose
   - listen: "80"
     server_name: "ovh.zozoh.fr"
     extra_parameters: |

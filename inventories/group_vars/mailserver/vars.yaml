@@ -34,6 +34,9 @@ mailserver_mailboxes:
   - username: vaultwarden@zozoh.fr
     name: Vaultwarden
     password: "{{ vault_mailserver_password_vaultwarden_zozoh }}"
+  - username: coolify@zozoh.fr
+    name: CoolPanda
+    password: "{{ vault_mailserver_password_coolify_zozoh }}"
   - username: web@lagabelle-saint-hilaire.fr
     name: La Gabelle web
     password: "{{ vault_mailserver_password_web_lagabelle }}"
@@ -42,11 +45,12 @@ mailserver_mailboxes:
 # (see mailserver_noreply_*); only declare the human-meaningful ones here.
 mailserver_aliases:
   # zozoh.fr → enzo@zozoh.fr
-  - { address: "abuse@zozoh.fr",       goto: "enzo@zozoh.fr" }
-  - { address: "contact@zozoh.fr",     goto: "enzo@zozoh.fr" }
-  - { address: "hostmaster@zozoh.fr",  goto: "enzo@zozoh.fr" }
-  - { address: "postmaster@zozoh.fr",  goto: "enzo@zozoh.fr" }
-  - { address: "webmaster@zozoh.fr",   goto: "enzo@zozoh.fr" }
+  - { address: "abuse@zozoh.fr",        goto: "enzo@zozoh.fr" }
+  - { address: "contact@zozoh.fr",      goto: "enzo@zozoh.fr" }
+  - { address: "hostmaster@zozoh.fr",   goto: "enzo@zozoh.fr" }
+  - { address: "postmaster@zozoh.fr",   goto: "enzo@zozoh.fr" }
+  - { address: "webmaster@zozoh.fr",    goto: "enzo@zozoh.fr" }
+  - { address: "enzo.hamelin@zozoh.fr", goto: "enzo@zozoh.fr" }
   # lagabelle-saint-hilaire.fr → external mailbox
   - { address: "contact@lagabelle-saint-hilaire.fr", goto: "lagabellesthilaire@gmail.com" }
 
@@ -62,3 +66,7 @@ mailserver_ovh_dns_enabled: true
 mailserver_ovh_application_key: "{{ vault_mailserver_ovh_application_key }}"
 mailserver_ovh_application_secret: "{{ vault_mailserver_ovh_application_secret }}"
 mailserver_ovh_consumer_key: "{{ vault_mailserver_ovh_consumer_key }}"
+
+# One-time: clear legacy A records that conflict with the role's CNAMEs.
+# Flip back to false after the next successful play.
+mailserver_ovh_dns_replace_conflicts: false
