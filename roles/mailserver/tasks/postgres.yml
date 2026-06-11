@@ -5,6 +5,15 @@
     state: started
     enabled: true
 
+# `postgresql.service` is an empty meta-wrapper (ExecStart=/bin/true) that
+# reports active even when the real postgresql@<ver>-main instance fails to
+# boot. Wait on the socket so a silent cluster failure surfaces here rather
+# than at the first query task against a dead socket.
+- name: Wait for PostgreSQL socket to accept connections
+  ansible.builtin.wait_for:
+    path: /var/run/postgresql/.s.PGSQL.5432
+    timeout: 30
+
 - name: Create postfix database user
   become: true
   become_user: postgres

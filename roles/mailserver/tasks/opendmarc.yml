@@ -7,6 +7,28 @@
     group: postfix
     mode: "0750"
 
+- name: Create OpenDMARC config directory
+  ansible.builtin.file:
+    path: /etc/opendmarc
+    state: directory
+    owner: root
+    group: opendmarc
+    mode: "0750"
+
+# OpenDMARC runs as the unprivileged `opendmarc` user and must be able to read
+# its own ignore list. The previous config pointed IgnoreHosts at OpenDKIM's
+# /etc/opendkim/TrustedHosts, which lives in a 0750 opendkim:opendkim dir that
+# opendmarc cannot traverse — so on restart (e.g. after a reboot) the daemon
+# exited with a config-load error.
+- name: Deploy OpenDMARC ignore hosts list
+  ansible.builtin.template:
+    src: opendmarc/ignore.hosts.j2
+    dest: /etc/opendmarc/ignore.hosts
+    owner: root
+    group: opendmarc
+    mode: "0640"
+  notify: Restart opendmarc
+
 - name: Deploy OpenDMARC configuration
   ansible.builtin.template:
     src: opendmarc/opendmarc.conf.j2

@@ -5,7 +5,7 @@ Syslog                  true
 
 AuthservID              "{{ mailserver_domain }}"
 TrustedAuthservIDs      "{{ mailserver_domain }}"
-IgnoreHosts             /etc/opendkim/TrustedHosts
+IgnoreHosts             /etc/opendmarc/ignore.hosts
 IgnoreMailFrom          "{{ mailserver_domain }}"
 RejectFailures          {{ mailserver_dmarc_reject_failures | lower }}
 

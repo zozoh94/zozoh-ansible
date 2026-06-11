@@ -1,0 +1,10 @@
+# Managed by Ansible — hosts whose SMTP connections OpenDMARC ignores.
+# OpenDMARC accepts hostnames, IP addresses and CIDR expressions (a leading
+# dot matches a domain and its subdomains). Unlike OpenDKIM's TrustedHosts,
+# the "*.domain" glob is NOT valid here.
+127.0.0.1
+::1
+localhost
+{% for domain in mailserver_domains %}
+.{{ domain }}
+{% endfor %}
