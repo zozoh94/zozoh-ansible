@@ -1,0 +1,9 @@
+---
+role_wireguard_played: false
+
+# Overridable in group_vars; defaults keep the role runnable standalone.
+wireguard_listen_port: 51820
+wireguard_address: "10.200.0.1/24"
+wireguard_admin_route: "192.168.1.0/24"
+wireguard_admin_gateway: "10.100.0.1"
+wireguard_peers: []

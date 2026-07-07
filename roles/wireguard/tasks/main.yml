@@ -1,0 +1,4 @@
+---
+- name: Include wireguard tasks
+  ansible.builtin.include_tasks: tasks.yml
+  when: not role_wireguard_played
