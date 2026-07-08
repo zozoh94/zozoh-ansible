@@ -11,7 +11,10 @@ PostUp   = iptables -A FORWARD -i %i -j ACCEPT
 PostUp   = iptables -A FORWARD -o %i -j ACCEPT
 # Masquerade tunnel-bound traffic so VMs can initiate to clients
 PostUp   = iptables -t nat -A POSTROUTING -o %i -j MASQUERADE
+# Masquerade client traffic heading to admin network so admin VMs can reply without a static route
+PostUp   = iptables -t nat -A POSTROUTING -s {{ wireguard_client_subnet }} -o $(ip -o route get {{ wireguard_admin_gateway }} | grep -oP 'dev \K\S+') -j MASQUERADE
 
+PostDown = iptables -t nat -D POSTROUTING -s {{ wireguard_client_subnet }} -o $(ip -o route get {{ wireguard_admin_gateway }} | grep -oP 'dev \K\S+') -j MASQUERADE
 PostDown = iptables -t nat -D POSTROUTING -o %i -j MASQUERADE
 PostDown = iptables -D FORWARD -o %i -j ACCEPT
 PostDown = iptables -D FORWARD -i %i -j ACCEPT
