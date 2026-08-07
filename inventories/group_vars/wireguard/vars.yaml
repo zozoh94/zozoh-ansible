@@ -16,4 +16,10 @@ wireguard_server_public_key: "birsZqVvHEfpeER+tGHGehuV/RVUp5Fu+iJMDxpQ7R0="
 
 # Declarative peers. Clients generate their own keypair; only the public key
 # and assigned tunnel IP live here. Start empty; real peers added in Task 5.
-wireguard_peers: []
+wireguard_peers:
+  - name: enzo-laptop
+    public_key: "nZIew3RizsRNvRFaLKkMF1FchSSwzn9Lb/7kkuf/rXU="
+    ip: "10.200.0.2/32"
+  - name: enzo-mac
+    public_key: "xO7hyDBkCtywvdJ682kIv/PeGERgdE+nOnIkqrU1EFA="
+    ip: "10.200.0.3/32"
