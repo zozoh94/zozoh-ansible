@@ -1,4 +1,5 @@
 """qBittorrent maintenance sidecar. Python stdlib only."""
+import os
 from dataclasses import dataclass
 
 
@@ -17,6 +18,37 @@ class Config:
 def _norm(path):
     p = path.rstrip("/")
     return p if p else "/"
+
+
+def largest_file(files):
+    if not files:
+        return None
+    return max(files, key=lambda f: f.get("size", 0))
+
+
+def file_nlink(path):
+    try:
+        return os.stat(path).st_nlink
+    except OSError:
+        return None
+
+
+def _as_bool(v):
+    return str(v).strip().lower() in ("true", "1", "yes")
+
+
+def load_config(environ):
+    c = Config()
+    return Config(
+        delete_ratio=float(environ.get("DELETE_RATIO", c.delete_ratio)),
+        move_ratio=float(environ.get("MOVE_RATIO", c.move_ratio)),
+        move_age_days=int(environ.get("MOVE_AGE_DAYS", c.move_age_days)),
+        downloads_path=environ.get("DOWNLOADS_PATH", c.downloads_path),
+        archive_path=environ.get("ARCHIVE_PATH", c.archive_path),
+        qbit_url=environ.get("QBIT_URL", c.qbit_url),
+        run_at_hour=int(environ.get("RUN_AT_HOUR", c.run_at_hour)),
+        dry_run=_as_bool(environ.get("DRY_RUN", "true")),
+    )
 
 
 def decide(*, ratio, age_seconds, save_path, nlink, cfg):
