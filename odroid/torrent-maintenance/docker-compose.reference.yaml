@@ -98,7 +98,7 @@ services:
     - torrent
     environment:
     - TZ=Europe/Paris
-    - DRY_RUN=true
+    - DRY_RUN=false
     - RUN_AT_HOUR=5
     volumes:
     - /mnt/ssd/Downloads:/downloads:ro
