@@ -78,3 +78,19 @@ def test_load_config_overrides():
                        "MOVE_AGE_DAYS": "7", "ARCHIVE_PATH": "/x"})
     assert cfg.delete_ratio == 3.0 and cfg.dry_run is False
     assert cfg.move_age_days == 7 and cfg.archive_path == "/x"
+
+
+from datetime import datetime
+from qbit_maintenance import seconds_until_hour
+
+def test_seconds_until_hour_same_day():
+    now = datetime(2026, 8, 12, 3, 0, 0)   # 03:00, target 05:00
+    assert seconds_until_hour(5, now) == 2 * 3600
+
+def test_seconds_until_hour_wraps_to_tomorrow():
+    now = datetime(2026, 8, 12, 6, 0, 0)   # 06:00, target 05:00 -> next day
+    assert seconds_until_hour(5, now) == 23 * 3600
+
+def test_seconds_until_hour_exactly_on_hour_waits_full_day():
+    now = datetime(2026, 8, 12, 5, 0, 0)   # exactly 05:00 -> next 05:00
+    assert seconds_until_hour(5, now) == 24 * 3600

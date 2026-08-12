@@ -1,6 +1,7 @@
 """qBittorrent maintenance sidecar. Python stdlib only."""
 import os
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 
 @dataclass
@@ -49,6 +50,13 @@ def load_config(environ):
         run_at_hour=int(environ.get("RUN_AT_HOUR", c.run_at_hour)),
         dry_run=_as_bool(environ.get("DRY_RUN", "true")),
     )
+
+
+def seconds_until_hour(target_hour, now):
+    target = now.replace(hour=target_hour, minute=0, second=0, microsecond=0)
+    if target <= now:
+        target += timedelta(days=1)
+    return int((target - now).total_seconds())
 
 
 def decide(*, ratio, age_seconds, save_path, nlink, cfg):
