@@ -3,3 +3,4 @@ bin/
 lib/
 pyvenv.cfg
 .vault.pass
+odroid/torrent-maintenance/.venv/
