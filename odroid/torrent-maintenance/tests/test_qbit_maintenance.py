@@ -135,3 +135,71 @@ def test_set_location_posts_hash_and_location():
     method, url, data = rec.calls[0]
     assert method == "POST" and url.endswith("/api/v2/torrents/setLocation")
     assert b"hashes=H2" in data and b"location=%2Fdownloads-old" in data
+
+
+from qbit_maintenance import run_once
+
+class StubClient:
+    def __init__(self, torrents, files_by_hash):
+        self._t = torrents
+        self._f = files_by_hash
+        self.deleted = []
+        self.moved = []
+    def completed(self):
+        return self._t
+    def files(self, h):
+        return self._f[h]
+    def delete(self, h):
+        self.deleted.append(h)
+    def set_location(self, h, loc):
+        self.moved.append((h, loc))
+
+NOW = 1_000_000_000.0
+
+def _run(torrents, files, nlink_map, dry_run):
+    client = StubClient(torrents, files)
+    cfg = Config(dry_run=dry_run)
+    logs = []
+    run_once(client, cfg, NOW,
+             stat_nlink=lambda p: nlink_map.get(p),
+             log=logs.append)
+    return client, logs
+
+def test_run_once_deletes_high_ratio_in_library():
+    t = [{"hash": "H", "ratio": 3.0, "added_on": NOW, "save_path": "/downloads"}]
+    f = {"H": [{"name": "movie.mkv", "size": 100}]}
+    client, _ = _run(t, f, {"/downloads/movie.mkv": 2}, dry_run=False)
+    assert client.deleted == ["H"] and client.moved == []
+
+def test_run_once_keeps_high_ratio_not_in_library():
+    t = [{"hash": "H", "ratio": 3.0, "added_on": NOW, "save_path": "/downloads"}]
+    f = {"H": [{"name": "movie.mkv", "size": 100}]}
+    client, _ = _run(t, f, {"/downloads/movie.mkv": 1}, dry_run=False)
+    assert client.deleted == [] and client.moved == []
+
+def test_run_once_archives_old_low_ratio():
+    added = NOW - 20 * 86400
+    t = [{"hash": "H", "ratio": 0.5, "added_on": added, "save_path": "/downloads"}]
+    f = {"H": [{"name": "movie.mkv", "size": 100}]}
+    client, _ = _run(t, f, {"/downloads/movie.mkv": 2}, dry_run=False)
+    assert client.moved == [("H", "/downloads-old")] and client.deleted == []
+
+def test_run_once_deletes_downloads_old_high_ratio_without_stat():
+    t = [{"hash": "H", "ratio": 9.0, "added_on": NOW, "save_path": "/downloads-old"}]
+    f = {"H": [{"name": "movie.mkv", "size": 100}]}
+    client, _ = _run(t, f, {}, dry_run=False)   # nlink not consulted
+    assert client.deleted == ["H"]
+
+def test_run_once_dry_run_performs_no_actions_but_logs():
+    t = [{"hash": "H", "ratio": 3.0, "added_on": NOW, "save_path": "/downloads"}]
+    f = {"H": [{"name": "movie.mkv", "size": 100}]}
+    client, logs = _run(t, f, {"/downloads/movie.mkv": 2}, dry_run=True)
+    assert client.deleted == [] and client.moved == []
+    assert any("WOULD delete" in m for m in logs)
+
+def test_run_once_picks_largest_file_for_nlink():
+    t = [{"hash": "H", "ratio": 3.0, "added_on": NOW, "save_path": "/downloads"}]
+    f = {"H": [{"name": "sample.mkv", "size": 1}, {"name": "main.mkv", "size": 999}]}
+    # only the large file is hardlinked; the small one is not
+    client, _ = _run(t, f, {"/downloads/main.mkv": 2, "/downloads/sample.mkv": 1}, dry_run=False)
+    assert client.deleted == ["H"]

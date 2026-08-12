@@ -95,6 +95,38 @@ class QbitClient:
                    {"hashes": torrent_hash, "location": location})
 
 
+def run_once(client, cfg, now_epoch, stat_nlink=None, log=print):
+    stat_nlink = stat_nlink or file_nlink
+    for t in client.completed():
+        h = t["hash"]
+        save_path = t.get("save_path", "")
+        ratio = float(t.get("ratio", 0.0))
+        age_seconds = now_epoch - float(t.get("added_on", now_epoch))
+
+        biggest = largest_file(client.files(h))
+        if biggest is None:
+            log(f"keep {h}: no files listed")
+            continue
+        path = save_path.rstrip("/") + "/" + biggest["name"]
+        nlink = stat_nlink(path)
+
+        action, reason = decide(ratio=ratio, age_seconds=age_seconds,
+                                save_path=save_path, nlink=nlink, cfg=cfg)
+        name = t.get("name", h)
+        if action == "keep":
+            log(f"keep '{name}': {reason}")
+            continue
+        verb = "delete" if action == "delete" else "archive"
+        if cfg.dry_run:
+            log(f"WOULD {verb} '{name}': {reason}")
+            continue
+        log(f"{verb} '{name}': {reason}")
+        if action == "delete":
+            client.delete(h)
+        else:
+            client.set_location(h, cfg.archive_path)
+
+
 def decide(*, ratio, age_seconds, save_path, nlink, cfg):
     """Return (action, reason). action in {'delete','archive','keep'}."""
     sp = _norm(save_path)
