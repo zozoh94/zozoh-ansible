@@ -160,10 +160,6 @@ def main(argv, environ):
             log(f"ERROR during pass: {e!r}")
 
 
-if __name__ == "__main__":
-    main(sys.argv[1:], os.environ)
-
-
 def decide(*, ratio, age_seconds, save_path, nlink, cfg):
     """Return (action, reason). action in {'delete','archive','keep'}."""
     sp = _norm(save_path)
@@ -186,3 +182,7 @@ def decide(*, ratio, age_seconds, save_path, nlink, cfg):
         return ("keep", "old and low ratio but not imported")
 
     return ("keep", "no rule applies")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:], os.environ)

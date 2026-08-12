@@ -215,3 +215,19 @@ def test_make_logger_writes_stdout_and_file(capsys):
         assert "hello world" in capsys.readouterr().out
         with open(lf) as fh:
             assert "hello world" in fh.read()
+
+
+import subprocess, sys as _sys
+
+def test_running_as_script_defines_all_names(tmp_path):
+    # Regression: main() -> run_once() -> decide() must not NameError because of
+    # def-order relative to the __main__ guard. Point at a closed port so the
+    # only possible failure is a connection error, never a NameError.
+    env = dict(os.environ)
+    env.update({"QBIT_URL": "http://127.0.0.1:9", "DRY_RUN": "true",
+                "LOG_FILE": str(tmp_path / "m.log")})
+    script = os.path.join(os.path.dirname(os.path.dirname(__file__)), "qbit_maintenance.py")
+    r = subprocess.run([_sys.executable, script, "--once"],
+                       capture_output=True, text=True, env=env, timeout=30)
+    assert "NameError" not in r.stderr
+    assert "start dry_run=True" in r.stdout

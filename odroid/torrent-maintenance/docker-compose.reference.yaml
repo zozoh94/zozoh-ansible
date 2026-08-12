@@ -1,0 +1,297 @@
+services:
+  proxy:
+    image: traefik:v2.4
+    container_name: traefik
+    dns:
+    - 1.1.1.1
+    - 1.0.0.1
+    command:
+    - --api.insecure=true
+    - --providers.docker=true
+    - --providers.docker.exposedbydefault=false
+    - --entrypoints.web.address=:80
+    - --entrypoints.web.http.redirections.entrypoint.to=websecure
+    - --entrypoints.websecure.address=:443
+    - --entrypoints.websecure.http.tls.certresolver=letsencrypt
+    - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+    - --certificatesresolvers.letsencrypt.acme.email=enzo@zozoh.fr
+    - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    ports:
+    - 80:80
+    - 443:443
+    volumes:
+    - ./letsencrypt:/letsencrypt
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: always
+  vpn:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+    - NET_ADMIN
+    devices:
+    - /dev/net/tun:/dev/net/tun
+    environment:
+    - VPN_SERVICE_PROVIDER=private internet access
+    - VPN_TYPE=openvpn
+    - OPENVPN_USER=p6690039
+    - OPENVPN_PASSWORD=piaPanda94!
+    - SERVER_REGIONS=Netherlands
+    - VPN_PORT_FORWARDING=on
+    - FIREWALL_OUTBOUND_SUBNETS=192.168.1.0/24
+    - BLOCK_MALICIOUS=off
+    - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'n=0; until wget -q -O /dev/null --post-data="json={\"listen_port\":{{PORTS}}}" http://127.0.0.1:8080/api/v2/app/setPreferences; do n=$$((n+1)); [ $$n -ge 12 ] && break; sleep 5; done'
+    sysctls:
+    - net.ipv6.conf.all.disable_ipv6=1
+    restart: always
+  vpn2:
+    image: qmcgaw/gluetun
+    container_name: gluetun2
+    cap_add:
+    - NET_ADMIN
+    devices:
+    - /dev/net/tun:/dev/net/tun
+    environment:
+    - VPN_SERVICE_PROVIDER=private internet access
+    - VPN_TYPE=openvpn
+    - OPENVPN_USER=p6690039
+    - OPENVPN_PASSWORD=piaPanda94!
+    - SERVER_REGIONS=Netherlands
+    - VPN_PORT_FORWARDING=on
+    - FIREWALL_OUTBOUND_SUBNETS=192.168.3.0/24
+    - BLOCK_MALICIOUS=off
+    - VPN_PORT_FORWARDING_UP_COMMAND=/bin/sh -c 'n=0; until wget -q -O /dev/null --post-data="json={\"listen_port\":{{PORTS}}}" http://127.0.0.1:8081/api/v2/app/setPreferences; do n=$$((n+1)); [ $$n -ge 12 ] && break; sleep 5; done'
+    sysctls:
+    - net.ipv6.conf.all.disable_ipv6=1
+    restart: always
+  torrent:
+    image: ghcr.io/linuxserver/qbittorrent
+    container_name: qbittorrent
+    network_mode: service:vpn
+    depends_on:
+    - vpn
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=Europe/Paris
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.torrent.loadbalancer.server.port=8080
+    - traefik.http.routers.torrent.rule=Host(`torrent.zozoh.fr`)
+    volumes:
+    - ./torrent/config:/config
+    - /mnt/ssd/Downloads:/downloads
+    - /mnt/ssd/music:/downloads/musics
+    - /mnt/ssd/videos/Films:/downloads/movies
+    - /mnt/ssd/videos/Séries:/downloads/series
+    - /mnt/DATA/Musique:/downloads/musics-archive
+    - /mnt/DATA/Videos/Films:/downloads/movies-archive
+    - /mnt/DATA/Videos/Séries:/downloads/series-archive
+    - /mnt/DATA/Livres:/downloads/books
+    - /mnt/DATA/Downloads:/downloads-old
+    restart: always
+  qbit-maintenance:
+    image: python:3-alpine
+    container_name: qbit-maintenance
+    network_mode: service:vpn
+    depends_on:
+    - vpn
+    - torrent
+    environment:
+    - TZ=Europe/Paris
+    - DRY_RUN=true
+    - RUN_AT_HOUR=5
+    volumes:
+    - /mnt/ssd/Downloads:/downloads:ro
+    - /opt/torrent/maintenance:/app
+    - /etc/localtime:/etc/localtime:ro
+    command:
+    - python
+    - /app/qbit_maintenance.py
+    restart: always
+  torrent2:
+    image: ghcr.io/linuxserver/qbittorrent
+    container_name: qbittorrent2
+    network_mode: service:vpn2
+    depends_on:
+    - vpn2
+    environment:
+    - WEBUI_PORT=8081
+    - PUID=1000
+    - PGID=1000
+    - TZ=Europe/Paris
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.torrent2.loadbalancer.server.port=8081
+    - traefik.http.routers.torrent2.rule=Host(`torrent31.zozoh.fr`)
+    volumes:
+    - ./torrent2/config:/config
+    - /mnt/ssd/.31zoz94:/downloads
+    restart: always
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    dns:
+    - 1.1.1.1
+    - 1.0.0.1
+    depends_on:
+    - vpn
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=Europe/Paris
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.radarr.loadbalancer.server.port=7878
+    - traefik.http.routers.radarr.rule=Host(`radarr.zozoh.fr`)
+    volumes:
+    - /mnt/ssd/torrent/radarr/config:/config
+    - /mnt/ssd/Downloads:/downloads
+    - /mnt/ssd/music:/downloads/musics
+    - /mnt/ssd/videos/Films:/downloads/movies
+    - /mnt/ssd/videos/Séries:/downloads/series
+    - /mnt/DATA/Videos/Films:/downloads/movies-archive
+    - /mnt/DATA/Videos/Séries:/downloads/series-archive
+    restart: always
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    dns:
+    - 1.1.1.1
+    - 1.0.0.1
+    depends_on:
+    - vpn
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=Europe/Paris
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.sonarr.loadbalancer.server.port=8989
+    - traefik.http.routers.sonarr.rule=Host(`sonarr.zozoh.fr`)
+    volumes:
+    - /mnt/ssd/torrent/sonarr/config:/config
+    - /mnt/ssd/Downloads:/downloads
+    - /mnt/ssd/music:/downloads/musics
+    - /mnt/ssd/videos/Films:/downloads/movies
+    - /mnt/ssd/videos/Séries:/downloads/series
+    - /mnt/DATA/Videos/Films:/downloads/movies-archive
+    - /mnt/DATA/Videos/Séries:/downloads/series-archive
+    restart: always
+  lidarr:
+    image: linuxserver/lidarr
+    container_name: lidarr
+    dns:
+    - 1.1.1.1
+    - 1.0.0.1
+    depends_on:
+    - vpn
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=Europe/Paris
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.lidarr.loadbalancer.server.port=8686
+    - traefik.http.routers.lidarr.rule=Host(`lidarr.zozoh.fr`)
+    volumes:
+    - /mnt/ssd/torrent/lidarr/config:/config
+    - /mnt/ssd/Downloads:/downloads
+    - /mnt/ssd/music:/downloads/musics
+    - /mnt/ssd/videos/Films:/downloads/movies
+    - /mnt/ssd/videos/Séries:/downloads/series
+    - /mnt/DATA/Videos/Films:/downloads/movies-archive
+    - /mnt/DATA/Videos/Séries:/downloads/series-archive
+    restart: always
+  readarr:
+    image: linuxserver/readarr:develop
+    container_name: readarr
+    dns:
+    - 1.1.1.1
+    - 1.0.0.1
+    depends_on:
+    - vpn
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=Europe/Paris
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.readarr.loadbalancer.server.port=8787
+    - traefik.http.routers.readarr.rule=Host(`readarr.zozoh.fr`)
+    volumes:
+    - /mnt/ssd/torrent/readarr/config:/config
+    - /mnt/ssd/Downloads:/downloads
+    - /mnt/ssd/music:/downloads/musics
+    - /mnt/ssd/videos/Films:/downloads/movies
+    - /mnt/ssd/videos/Séries:/downloads/series
+    - /mnt/DATA/Videos/Films:/downloads/movies-archive
+    - /mnt/DATA/Videos/Séries:/downloads/series-archive
+    - /mnt/DATA/Livres:/downloads/books
+    restart: always
+  filebrowser:
+    image: hurlenko/filebrowser
+    container_name: filebrowser
+    dns:
+    - 1.1.1.1
+    - 1.0.0.1
+    depends_on:
+    - vpn
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=Europe/Paris
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.filebrowser.loadbalancer.server.port=8080
+    - traefik.http.routers.filebrowser.rule=Host(`filebrowser.zozoh.fr`)
+    volumes:
+    - /mnt/ssd/torrent/filebrowser/config:/config
+    - /mnt/ssd/music:/data/musics
+    - /mnt/ssd/videos/Films:/data/movies
+    - /mnt/ssd/videos/Séries:/data/series
+    - /mnt/DATA/Videos/Films:/data/movies-archive
+    - /mnt/DATA/Videos/Séries:/data/series-archive
+    - /mnt/DATA/Livres:/data/books
+    restart: always
+  prowlarr:
+    image: linuxserver/prowlarr:latest
+    container_name: prowlarr
+    dns:
+    - 1.1.1.1
+    - 1.0.0.1
+    depends_on:
+    - vpn
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.jackett.loadbalancer.server.port=9696
+    - traefik.http.routers.jackett.rule=Host(`prowlarr.zozoh.fr`)
+    environment:
+    - PUID=1000
+    - PGID=1000
+    - TZ=Europe/Paris
+    sysctls:
+    - net.ipv6.conf.all.disable_ipv6=1
+    volumes:
+    - ./prowlarr/config:/config
+    restart: always
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: jellyfin
+    user: 114:124
+    group_add:
+    - '112'
+    - '44'
+    volumes:
+    - /mnt/ssd/config/jellyfin:/config
+    - /mnt/ssd/cache/jellyfin:/cache
+    - /mnt/DATA:/media/DATA
+    - /mnt/ssd:/media/ssd
+    restart: always
+    devices:
+    - /dev/dri/renderD128:/dev/dri/renderD128
+    - /dev/dri/card0:/dev/dri/card0
+    - /dev/dri/card1:/dev/dri/card1
+    labels:
+    - traefik.enable=true
+    - traefik.http.services.jellyfin.loadbalancer.server.port=8096
+    - traefik.http.routers.jellyfin.rule=Host(`jelly.zozoh.fr`)
