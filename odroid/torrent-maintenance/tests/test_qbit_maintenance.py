@@ -94,3 +94,44 @@ def test_seconds_until_hour_wraps_to_tomorrow():
 def test_seconds_until_hour_exactly_on_hour_waits_full_day():
     now = datetime(2026, 8, 12, 5, 0, 0)   # exactly 05:00 -> next 05:00
     assert seconds_until_hour(5, now) == 24 * 3600
+
+
+import json as _json
+from qbit_maintenance import QbitClient
+
+class Recorder:
+    def __init__(self, response=b"[]"):
+        self.calls = []
+        self.response = response
+    def __call__(self, method, url, data):
+        self.calls.append((method, url, data))
+        return self.response
+
+def test_completed_builds_get_and_parses_json():
+    rec = Recorder(_json.dumps([{"hash": "AB", "ratio": 3.0}]).encode())
+    c = QbitClient("http://x:8080", request=rec)
+    out = c.completed()
+    assert out[0]["hash"] == "AB"
+    method, url, data = rec.calls[0]
+    assert method == "GET" and url.endswith("/api/v2/torrents/info?filter=completed")
+    assert data is None
+
+def test_files_includes_hash_in_query():
+    rec = Recorder(b"[]")
+    QbitClient("http://x:8080", request=rec).files("DEAD")
+    method, url, data = rec.calls[0]
+    assert method == "GET" and "hash=DEAD" in url
+
+def test_delete_posts_deletefiles_true():
+    rec = Recorder(b"")
+    QbitClient("http://x:8080", request=rec).delete("H1")
+    method, url, data = rec.calls[0]
+    assert method == "POST" and url.endswith("/api/v2/torrents/delete")
+    assert b"hashes=H1" in data and b"deleteFiles=true" in data
+
+def test_set_location_posts_hash_and_location():
+    rec = Recorder(b"")
+    QbitClient("http://x:8080", request=rec).set_location("H2", "/downloads-old")
+    method, url, data = rec.calls[0]
+    assert method == "POST" and url.endswith("/api/v2/torrents/setLocation")
+    assert b"hashes=H2" in data and b"location=%2Fdownloads-old" in data

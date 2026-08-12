@@ -1,7 +1,9 @@
 """qBittorrent maintenance sidecar. Python stdlib only."""
+import json
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from urllib import request as _urlreq, parse as _urlparse
 
 
 @dataclass
@@ -57,6 +59,40 @@ def seconds_until_hour(target_hour, now):
     if target <= now:
         target += timedelta(days=1)
     return int((target - now).total_seconds())
+
+
+def _default_request(method, url, data):
+    req = _urlreq.Request(url, data=data, method=method)
+    with _urlreq.urlopen(req, timeout=30) as resp:
+        return resp.read()
+
+
+class QbitClient:
+    def __init__(self, base_url, request=None):
+        self.base = base_url.rstrip("/")
+        self._request = request or _default_request
+
+    def _get_json(self, path):
+        raw = self._request("GET", self.base + path, None)
+        return json.loads(raw or b"[]")
+
+    def _post(self, path, fields):
+        data = _urlparse.urlencode(fields).encode()
+        self._request("POST", self.base + path, data)
+
+    def completed(self):
+        return self._get_json("/api/v2/torrents/info?filter=completed")
+
+    def files(self, torrent_hash):
+        return self._get_json("/api/v2/torrents/files?hash=" + _urlparse.quote(torrent_hash))
+
+    def delete(self, torrent_hash):
+        self._post("/api/v2/torrents/delete",
+                   {"hashes": torrent_hash, "deleteFiles": "true"})
+
+    def set_location(self, torrent_hash, location):
+        self._post("/api/v2/torrents/setLocation",
+                   {"hashes": torrent_hash, "location": location})
 
 
 def decide(*, ratio, age_seconds, save_path, nlink, cfg):
