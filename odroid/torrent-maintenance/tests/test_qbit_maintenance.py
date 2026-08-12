@@ -203,3 +203,15 @@ def test_run_once_picks_largest_file_for_nlink():
     # only the large file is hardlinked; the small one is not
     client, _ = _run(t, f, {"/downloads/main.mkv": 2, "/downloads/sample.mkv": 1}, dry_run=False)
     assert client.deleted == ["H"]
+
+
+from qbit_maintenance import make_logger
+
+def test_make_logger_writes_stdout_and_file(capsys):
+    with tempfile.TemporaryDirectory() as td:
+        lf = os.path.join(td, "m.log")
+        log = make_logger(lf)
+        log("hello world")
+        assert "hello world" in capsys.readouterr().out
+        with open(lf) as fh:
+            assert "hello world" in fh.read()

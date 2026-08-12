@@ -1,6 +1,8 @@
 """qBittorrent maintenance sidecar. Python stdlib only."""
 import json
 import os
+import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from urllib import request as _urlreq, parse as _urlparse
@@ -125,6 +127,41 @@ def run_once(client, cfg, now_epoch, stat_nlink=None, log=print):
             client.delete(h)
         else:
             client.set_location(h, cfg.archive_path)
+
+
+def make_logger(logfile):
+    def log(msg):
+        line = time.strftime("%Y-%m-%d %H:%M:%S ") + msg
+        print(line, flush=True)
+        try:
+            with open(logfile, "a") as fh:
+                fh.write(line + "\n")
+        except OSError:
+            pass
+    return log
+
+
+def main(argv, environ):
+    cfg = load_config(environ)
+    log = make_logger(environ.get("LOG_FILE", "/app/maintenance.log"))
+    client = QbitClient(cfg.qbit_url)
+    once = "--once" in argv
+    log(f"start dry_run={cfg.dry_run} run_at_hour={cfg.run_at_hour} once={once}")
+    if once:
+        run_once(client, cfg, time.time(), log=log)
+        return
+    while True:
+        wait = seconds_until_hour(cfg.run_at_hour, datetime.now())
+        log(f"sleeping {wait}s until {cfg.run_at_hour:02d}:00")
+        time.sleep(wait)
+        try:
+            run_once(client, cfg, time.time(), log=log)
+        except Exception as e:  # never let the loop die
+            log(f"ERROR during pass: {e!r}")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:], os.environ)
 
 
 def decide(*, ratio, age_seconds, save_path, nlink, cfg):
