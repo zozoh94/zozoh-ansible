@@ -96,14 +96,15 @@ dedup_downloads_old() {
 
 New service in `/opt/torrent/docker-compose.yaml`:
 
-- `image: python:3-alpine`, `network_mode: service:vpn`, `depends_on: [vpn, torrent]`, `restart: always`.
-- **Stdlib-only** Python script (`urllib`, `os`, `json`) bind-mounted from the host. No `pip install`.
-- Loop: run one pass, then `sleep ${INTERVAL_SECONDS:-86400}`. First pass on start.
+- `image: python:3-alpine`, `network_mode: service:vpn`, `depends_on: [vpn, torrent]`, `restart: always`, `environment: TZ=Europe/Paris`.
+- **Stdlib-only** Python script (`urllib`, `os`, `json`, `time`) bind-mounted from the host. No `pip install`.
+- **Fixed-time schedule:** the loop computes the seconds until the next `RUN_AT_HOUR` (05:00 local, offset from `move_videos.sh` at 03:00) and sleeps until then, runs one pass, repeats. It does **not** run a pass on container start (avoids an unscheduled pass on restart). A `--once` argument runs a single pass immediately — used for manual/dry-run testing (`docker exec qbit-maintenance python /app/qbit_maintenance.py --once`).
 - Reaches qBittorrent at `http://127.0.0.1:8080` (same namespace, no auth).
 
 **Mounts:**
 - `/mnt/ssd/Downloads:/downloads:ro` — read-only, to `stat` `nlink` of torrent files. The sidecar never writes to data disks; qBittorrent performs every delete/move.
 - `/opt/torrent/maintenance:/app` — the script and the persistent `maintenance.log` (logs also go to stdout → `docker logs qbit-maintenance`).
+- `/etc/localtime:/etc/localtime:ro` — so `05:00` is Europe/Paris local time on `python:3-alpine` (no `tzdata` install needed).
 
 ### Per-pass logic
 
@@ -136,7 +137,7 @@ Torrents seeding from any other path (`/downloads/movies`, `/downloads/series`, 
 | `MOVE_RATIO` | `2.0` | archive when `ratio <` this |
 | `DOWNLOADS_PATH` | `/downloads` | active download root |
 | `ARCHIVE_PATH` | `/downloads-old` | archive destination |
-| `INTERVAL_SECONDS` | `86400` | sleep between passes |
+| `RUN_AT_HOUR` | `5` | local hour (Europe/Paris) at which the daily pass runs |
 | `DRY_RUN` | `true` | when true: log intended actions, call nothing destructive |
 
 ## Rollout / safety
