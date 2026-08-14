@@ -1,0 +1,152 @@
+---
+# Upgrade Docker CE packages (from download.docker.com apt repo) and install an
+# unattended-upgrades drop-in so Docker stays auto-patched going forward.
+#
+# Docker's repo (origin=Docker) is not covered by the default Debian-only
+# unattended-upgrades Origins-Pattern, so these packages otherwise drift.
+#
+# Snapshot insurance via community.general.proxmox_snap (same pattern as
+# playbooks/upgrade-debian.yaml). Upgrading docker-ce/containerd.io restarts the
+# daemon, briefly bouncing containers; those with a restart policy self-recover.
+#
+# Invocation (canary first, then the rest):
+#   ansible-playbook playbooks/upgrade-docker.yaml \
+#       --limit gitlab-runner1.ovh.zozoh.fr -e confirm_docker_upgrade=yes
+#   ansible-playbook playbooks/upgrade-docker.yaml \
+#       --limit 'nextcloud.ovh.zozoh.fr:vaultwarden.ovh.zozoh.fr:coolify.ovh.zozoh.fr' \
+#       -e confirm_docker_upgrade=yes
+
+- name: Upgrade Docker CE and enable auto-updates
+  hosts: all
+  become: yes
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: yes
+
+  vars:
+    docker_packages:
+      - docker-ce
+      - docker-ce-cli
+      - docker-ce-rootless-extras
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+
+  tasks:
+    # ----- Pre-flight -----
+
+    - name: "Pre-flight: require confirm_docker_upgrade=yes"
+      ansible.builtin.assert:
+        that:
+          - confirm_docker_upgrade | default('') == 'yes'
+        fail_msg: >-
+          Refusing to run without -e confirm_docker_upgrade=yes.
+          This restarts the Docker daemon and briefly interrupts containers.
+
+    - name: "Pre-flight: require Proxmox snapshot vars"
+      ansible.builtin.assert:
+        that:
+          - proxmox_api_host is defined and proxmox_api_host | length > 0
+          - proxmox_api_user is defined and proxmox_api_user | length > 0
+          - proxmox_api_token_id is defined and proxmox_api_token_id | length > 0
+          - proxmox_api_token_secret is defined and proxmox_api_token_secret | length > 0
+          - proxmox_vmid is defined
+        fail_msg: >-
+          Missing Proxmox snapshot vars (proxmox_api_host, proxmox_api_user,
+          proxmox_api_token_id, proxmox_api_token_secret, proxmox_vmid).
+
+    - name: "Pre-flight: record running containers before"
+      ansible.builtin.command: docker ps --format '{% raw %}{{.Names}}{% endraw %}'
+      register: pre_containers
+      changed_when: false
+      failed_when: false
+
+    - name: "Pre-flight: record Docker version before"
+      ansible.builtin.command: docker version --format '{% raw %}{{.Server.Version}}{% endraw %}'
+      register: pre_ver
+      changed_when: false
+      failed_when: false
+
+    # ----- Snapshot -----
+
+    - name: "Snapshot: take Proxmox snapshot"
+      community.general.proxmox_snap:
+        api_host: "{{ proxmox_api_host }}"
+        api_user: "{{ proxmox_api_user }}"
+        api_token_id: "{{ proxmox_api_token_id }}"
+        api_token_secret: "{{ proxmox_api_token_secret }}"
+        validate_certs: "{{ proxmox_api_validate_certs | default(true) }}"
+        vmid: "{{ proxmox_vmid }}"
+        snapname: "pre-docker-{{ ansible_date_time.iso8601_basic_short }}"
+        description: "Auto snapshot before Docker CE upgrade ({{ inventory_hostname }})"
+        vmstate: false
+        timeout: 300
+        state: present
+      delegate_to: localhost
+      become: false
+
+    # ----- Upgrade -----
+
+    - name: "Upgrade: apt update"
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: "Upgrade: only-upgrade Docker packages"
+      ansible.builtin.apt:
+        name: "{{ docker_packages }}"
+        state: latest
+        only_upgrade: yes
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    # ----- Verify -----
+
+    - name: "Verify: Docker version after"
+      ansible.builtin.command: docker version --format '{% raw %}{{.Server.Version}}{% endraw %}'
+      register: post_ver
+      changed_when: false
+
+    - name: "Verify: wait for daemon to settle, list containers"
+      ansible.builtin.command: docker ps --format '{% raw %}{{.Names}}{% endraw %}'
+      register: post_containers
+      changed_when: false
+      retries: 12
+      delay: 5
+      until: post_containers.stdout_lines | length >= (pre_containers.stdout_lines | default([]) | length)
+      failed_when: false
+
+    # ----- Long-term fix: keep Docker auto-patched -----
+
+    - name: "Long-term: unattended-upgrades drop-in for Docker origin"
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/51unattended-upgrades-docker
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          // Managed by ansible (playbooks/upgrade-docker.yaml).
+          // download.docker.com is not a Debian origin, so the default
+          // Debian-only Origins-Pattern never auto-patches Docker CE.
+          // APT merges Origins-Pattern blocks additively across files, so this
+          // ADDS the Docker origin without touching the Debian entries.
+          Unattended-Upgrade::Origins-Pattern {
+                  "origin=Docker,label=Docker CE";
+          };
+      register: uu_dropin
+
+    - name: "Long-term: validate unattended-upgrades config parses"
+      ansible.builtin.command: unattended-upgrade --dry-run
+      changed_when: false
+      failed_when: false
+      register: uu_dryrun
+
+    # ----- Summary -----
+
+    - name: "Summary"
+      ansible.builtin.debug:
+        msg:
+          - "Host: {{ inventory_hostname }} (vmid {{ proxmox_vmid }})"
+          - "Docker: {{ pre_ver.stdout | default('?') }} -> {{ post_ver.stdout }}"
+          - "Containers before: {{ pre_containers.stdout_lines | default([]) }}"
+          - "Containers after:  {{ post_containers.stdout_lines | default([]) }}"
+          - "unattended drop-in changed: {{ uu_dropin.changed }}"
