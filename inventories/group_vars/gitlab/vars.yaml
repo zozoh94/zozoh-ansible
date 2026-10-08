@@ -19,6 +19,11 @@ gitlab_extra_settings:
   - gitlab_rails:
       - key: "gitlab_shell_ssh_port"
         value: "2222"
+      # Keep GitLab's localhost defaults, add the Middle Monitor server so it can
+      # reach the IP-restricted monitoring endpoints (/-/metrics, /-/health).
+      - key: "monitoring_whitelist"
+        type: plain
+        value: "['127.0.0.0/8', '::1/128', '192.168.3.1']"
   - registry_nginx:
       - key: "redirect_http_to_https"
         value: false
