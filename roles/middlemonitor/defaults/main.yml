@@ -1,0 +1,24 @@
+---
+role_middlemonitor_played: false
+
+middlemonitor_dir: /opt/middlemonitor
+
+# HTTP_PORT passed to the upstream compose line "${HTTP_PORT:-8000}:80".
+# Binding to 127.0.0.1 keeps the stack reachable only through the host nginx.
+middlemonitor_bind: "127.0.0.1:8000"
+# What the host nginx reverse-proxies to.
+middlemonitor_upstream: "127.0.0.1:8000"
+
+middlemonitor_public_url: "https://{{ middlemonitor_domain }}"
+
+# Upstream deploy files are fetched unchanged from this base at middlemonitor_ref.
+middlemonitor_raw_base: "https://raw.githubusercontent.com/middle-monitor/middle-monitor/{{ middlemonitor_ref }}/deploy/self-hosted"
+
+# Root-cause explanation engine: "rules" needs nothing external.
+middlemonitor_explain_mode: rules
+
+# Optional SMTP for invitations and alert mail. Empty leaves it off.
+middlemonitor_smtp_host: ""
+middlemonitor_smtp_port: 587
+middlemonitor_smtp_user: ""
+middlemonitor_smtp_from: ""
