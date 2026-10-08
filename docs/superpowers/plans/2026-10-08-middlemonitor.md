@@ -749,12 +749,14 @@ Append under `all.children`. The odroid reaches the API over the public URL, so 
 ```yaml
     odroid:
       hosts:
-        odroid:
+        odroid.home:
           ansible_host: 83.205.35.25
           ansible_port: 2222
           ansible_user: enzo
           middlemonitor_agent_api_host_ip: ""
 ```
+
+(The host is named `odroid.home`, distinct from the `odroid` group, to avoid an Ansible group/host name collision that otherwise drops the host var override.)
 
 - [ ] **Step 10: Add the private-IP var to `inventories/group_vars/all/vars.yaml`**
 

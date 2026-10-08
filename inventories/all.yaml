@@ -47,3 +47,11 @@ all:
       hosts:
         monitor.ovh.zozoh.fr:
           proxmox_vmid: 211
+    odroid:
+      hosts:
+        odroid.home:
+          ansible_host: 83.205.35.25
+          ansible_port: 2222
+          ansible_user: enzo
+          # Home box: reaches the API over the public URL, no private IP override.
+          middlemonitor_agent_api_host_ip: ""

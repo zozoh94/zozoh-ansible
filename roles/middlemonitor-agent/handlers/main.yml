@@ -1,0 +1,17 @@
+---
+- name: Reload systemd
+  become: yes
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Reload middle-monitor-agent
+  become: yes
+  ansible.builtin.service:
+    name: middle-monitor-agent
+    state: reloaded
+
+- name: Restart middle-monitor-agent
+  become: yes
+  ansible.builtin.service:
+    name: middle-monitor-agent
+    state: restarted

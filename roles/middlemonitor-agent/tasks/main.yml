@@ -1,0 +1,4 @@
+---
+- name: Include middlemonitor-agent task
+  ansible.builtin.include_tasks: tasks.yml
+  when: not role_middlemonitor_agent_played

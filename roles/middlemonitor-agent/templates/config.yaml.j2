@@ -1,0 +1,15 @@
+# Managed by Ansible - do not edit manually
+api:
+  url: "{{ middlemonitor_agent_api_url }}"
+  api_key: "{{ middlemonitor_agent_api_key }}"
+
+host:
+  name: "{{ inventory_hostname }}"
+
+metrics:
+  cpu: {{ middlemonitor_agent_cpu | lower }}
+  ram: {{ middlemonitor_agent_ram | lower }}
+  disk: {{ middlemonitor_agent_disk | lower }}
+  network: {{ middlemonitor_agent_network | lower }}
+
+interval: {{ middlemonitor_agent_interval }}

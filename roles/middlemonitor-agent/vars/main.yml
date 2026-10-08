@@ -1,0 +1,9 @@
+---
+# Map Ansible's uname-style arch to the agent's download naming.
+_middlemonitor_agent_arch_map:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: arm
+middlemonitor_agent_os: "{{ ansible_system | lower }}"
+middlemonitor_agent_arch: "{{ _middlemonitor_agent_arch_map[ansible_architecture] | default(ansible_architecture) }}"
+middlemonitor_agent_api_host: "{{ middlemonitor_agent_api_url | urlsplit('hostname') }}"

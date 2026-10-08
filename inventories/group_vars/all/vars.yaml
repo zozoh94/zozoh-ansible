@@ -3,6 +3,10 @@ domain: ovh.zozoh.fr
 
 admin_email: enzo@zozoh.fr
 
+# Agents on the OVH network reach the Middle Monitor API by its private IP,
+# skipping the proxy hairpin. Overridden to "" on hosts that must use public DNS.
+middlemonitor_agent_api_host_ip: 192.168.3.1
+
 # Cross-cutting /etc/hosts entries applied on every managed host by the common role.
 # Use this for service names whose public DNS doesn't reach the private network
 # (e.g. smtp.zozoh.fr resolves to the proxy public IP which doesn't forward 587).

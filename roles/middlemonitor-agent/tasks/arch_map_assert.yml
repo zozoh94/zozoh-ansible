@@ -1,0 +1,8 @@
+---
+- name: Assert the architecture maps to a known agent platform
+  ansible.builtin.assert:
+    that:
+      - middlemonitor_agent_arch in ['amd64', 'arm64', 'arm']
+    fail_msg: >
+      Unmapped architecture '{{ ansible_architecture }}' -> '{{ middlemonitor_agent_arch }}'.
+      Add it to _middlemonitor_agent_arch_map in roles/middlemonitor-agent/vars/main.yml.

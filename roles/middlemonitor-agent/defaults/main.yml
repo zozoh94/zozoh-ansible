@@ -1,0 +1,16 @@
+---
+role_middlemonitor_agent_played: false
+
+middlemonitor_agent_api_url: "https://monitor.zozoh.fr"
+middlemonitor_agent_config_dir: /etc/middle-monitor
+middlemonitor_agent_bin_dir: /usr/local/bin
+
+# Point the API hostname at a private IP on hosts that have one (skips the proxy
+# hairpin). Empty means use public DNS (the odroid). Set in group_vars.
+middlemonitor_agent_api_host_ip: ""
+
+middlemonitor_agent_cpu: true
+middlemonitor_agent_ram: true
+middlemonitor_agent_disk: true
+middlemonitor_agent_network: true
+middlemonitor_agent_interval: 60

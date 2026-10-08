@@ -1,0 +1,71 @@
+---
+- name: Validate the resolved architecture
+  ansible.builtin.import_tasks: arch_map_assert.yml
+
+- name: Fail early when the install token is missing
+  ansible.builtin.assert:
+    that:
+      - middlemonitor_agent_api_key is defined
+      - middlemonitor_agent_api_key | length > 0
+    fail_msg: >
+      middlemonitor_agent_api_key is not set. Generate an install token in the
+      Middle Monitor UI ({{ middlemonitor_agent_api_url }}) and store it encrypted
+      in inventories/group_vars/all/vault.yaml.
+
+- name: Point the API hostname at its private IP (skip the proxy hairpin)
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "[[:space:]]{{ middlemonitor_agent_api_host | regex_escape }}$"
+    line: "{{ middlemonitor_agent_api_host_ip }}\t{{ middlemonitor_agent_api_host }}"
+    state: present
+  when: middlemonitor_agent_api_host_ip | length > 0
+
+- name: Create config directory
+  ansible.builtin.file:
+    path: "{{ middlemonitor_agent_config_dir }}"
+    state: directory
+    mode: "0750"
+
+- name: Download the agent binary (checksum from the API's own endpoint)
+  ansible.builtin.get_url:
+    url: "{{ middlemonitor_agent_api_url }}/api/v1/agents/download/{{ middlemonitor_agent_os }}/{{ middlemonitor_agent_arch }}"
+    dest: "{{ middlemonitor_agent_bin_dir }}/middle-monitor-agent-{{ middlemonitor_agent_os }}-{{ middlemonitor_agent_arch }}"
+    checksum: "sha256:{{ middlemonitor_agent_api_url }}/api/v1/agents/download/{{ middlemonitor_agent_os }}/{{ middlemonitor_agent_arch }}/sha256"
+    mode: "0755"
+  notify: Restart middle-monitor-agent
+
+- name: Symlink the agent binary to a stable name
+  ansible.builtin.file:
+    src: "{{ middlemonitor_agent_bin_dir }}/middle-monitor-agent-{{ middlemonitor_agent_os }}-{{ middlemonitor_agent_arch }}"
+    dest: "{{ middlemonitor_agent_bin_dir }}/middle-monitor-agent"
+    state: link
+  notify: Restart middle-monitor-agent
+
+- name: Deploy agent configuration
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ middlemonitor_agent_config_dir }}/config.yaml"
+    mode: "0640"
+    validate: "{{ middlemonitor_agent_bin_dir }}/middle-monitor-agent --config-check --config %s"
+  notify: Reload middle-monitor-agent
+  no_log: true
+
+- name: Deploy systemd unit
+  ansible.builtin.template:
+    src: middle-monitor-agent.service.j2
+    dest: /etc/systemd/system/middle-monitor-agent.service
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart middle-monitor-agent
+
+- name: Enable and start the agent
+  ansible.builtin.systemd:
+    name: middle-monitor-agent
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Role middlemonitor-agent played
+  ansible.builtin.set_fact:
+    role_middlemonitor_agent_played: true
