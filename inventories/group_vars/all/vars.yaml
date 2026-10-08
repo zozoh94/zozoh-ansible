@@ -3,9 +3,11 @@ domain: ovh.zozoh.fr
 
 admin_email: enzo@zozoh.fr
 
-# Agents on the OVH network reach the Middle Monitor API by its private IP,
-# skipping the proxy hairpin. Overridden to "" on hosts that must use public DNS.
-middlemonitor_agent_api_host_ip: 192.168.3.1
+# Agents reach the Middle Monitor API through proxy1 (its :443 listener speaks the
+# PROXY protocol, so only proxy1 may talk to it). OVH agents cannot hairpin to
+# proxy1's public IP, so they resolve monitor.zozoh.fr to proxy1's PRIVATE IP here.
+# Overridden to "" on hosts that reach proxy1 over public DNS (the odroid).
+middlemonitor_agent_api_host_ip: 192.168.0.225
 
 # Cross-cutting /etc/hosts entries applied on every managed host by the common role.
 # Use this for service names whose public DNS doesn't reach the private network
