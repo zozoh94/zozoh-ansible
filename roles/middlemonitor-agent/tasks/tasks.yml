@@ -5,8 +5,7 @@
 - name: Fail early when the install token is missing
   ansible.builtin.assert:
     that:
-      - middlemonitor_agent_api_key is defined
-      - middlemonitor_agent_api_key | length > 0
+      - middlemonitor_agent_api_key | default('') | length > 0
     fail_msg: >
       middlemonitor_agent_api_key is not set. Generate an install token in the
       Middle Monitor UI ({{ middlemonitor_agent_api_url }}) and store it encrypted
@@ -15,7 +14,7 @@
 - name: Point the API hostname at its private IP (skip the proxy hairpin)
   ansible.builtin.lineinfile:
     path: /etc/hosts
-    regexp: "[[:space:]]{{ middlemonitor_agent_api_host | regex_escape }}$"
+    regexp: "\\s{{ middlemonitor_agent_api_host | regex_escape }}$"
     line: "{{ middlemonitor_agent_api_host_ip }}\t{{ middlemonitor_agent_api_host }}"
     state: present
   when: middlemonitor_agent_api_host_ip | length > 0
@@ -26,11 +25,21 @@
     state: directory
     mode: "0750"
 
-- name: Download the agent binary (checksum from the API's own endpoint)
+# Fetch the digest ourselves and pass it as a bare hash. get_url's URL-checksum
+# path matches by the download URL's basename ("amd64"), which a shasum-format
+# file ("<hash>  <name>") never contains, so it would fail; the first token of
+# the response is the hash whether the endpoint returns a bare hash or shasum.
+- name: Fetch the published agent checksum
+  ansible.builtin.uri:
+    url: "{{ middlemonitor_agent_api_url }}/api/v1/agents/download/{{ middlemonitor_agent_os }}/{{ middlemonitor_agent_arch }}/sha256"
+    return_content: true
+  register: middlemonitor_agent_sha
+
+- name: Download the agent binary (verified against the published checksum)
   ansible.builtin.get_url:
     url: "{{ middlemonitor_agent_api_url }}/api/v1/agents/download/{{ middlemonitor_agent_os }}/{{ middlemonitor_agent_arch }}"
     dest: "{{ middlemonitor_agent_bin_dir }}/middle-monitor-agent-{{ middlemonitor_agent_os }}-{{ middlemonitor_agent_arch }}"
-    checksum: "sha256:{{ middlemonitor_agent_api_url }}/api/v1/agents/download/{{ middlemonitor_agent_os }}/{{ middlemonitor_agent_arch }}/sha256"
+    checksum: "sha256:{{ middlemonitor_agent_sha.content.split() | first }}"
     mode: "0755"
   notify: Restart middle-monitor-agent
 
