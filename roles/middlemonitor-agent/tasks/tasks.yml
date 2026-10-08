@@ -11,12 +11,21 @@
       Middle Monitor UI ({{ middlemonitor_agent_api_url }}) and store it encrypted
       in inventories/group_vars/all/vault.yaml.
 
-- name: Point the API hostname at its private IP (skip the proxy hairpin)
+# Route monitor.zozoh.fr to proxy1 on hosts that cannot use public DNS. Written as
+# its own dedicated line, and also into the cloud-init template, because these hosts
+# run manage_etc_hosts (cloud-init rebuilds /etc/hosts from the template on reboot).
+# The regexp matches only a line whose sole hostname is the API host, so it never
+# touches another service's entry or a line that groups several hostnames.
+- name: Point the API hostname at proxy1 (persisted for cloud-init)
   ansible.builtin.lineinfile:
-    path: /etc/hosts
-    regexp: "\\s{{ middlemonitor_agent_api_host | regex_escape }}$"
+    path: "{{ item }}"
+    regexp: "^[0-9.]+\\s+{{ middlemonitor_agent_api_host | regex_escape }}\\s*$"
     line: "{{ middlemonitor_agent_api_host_ip }}\t{{ middlemonitor_agent_api_host }}"
     state: present
+    backup: yes
+  loop:
+    - /etc/hosts
+    - /etc/cloud/templates/hosts.debian.tmpl
   when: middlemonitor_agent_api_host_ip | length > 0
 
 - name: Create config directory
