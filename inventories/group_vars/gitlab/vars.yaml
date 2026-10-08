@@ -19,11 +19,12 @@ gitlab_extra_settings:
   - gitlab_rails:
       - key: "gitlab_shell_ssh_port"
         value: "2222"
-      # Keep GitLab's localhost defaults, add the Middle Monitor server so it can
-      # reach the IP-restricted monitoring endpoints (/-/metrics, /-/health).
+      # Keep GitLab's localhost defaults, add proxy1 (192.168.0.225): Middle Monitor
+      # reaches the IP-restricted endpoints (/-/metrics, /-/health) through proxy1,
+      # which terminates gitlab.zozoh.fr, so GitLab sees proxy1 as the source.
       - key: "monitoring_whitelist"
         type: plain
-        value: "['127.0.0.0/8', '::1/128', '192.168.3.1']"
+        value: "['127.0.0.0/8', '::1/128', '192.168.0.225']"
   - registry_nginx:
       - key: "redirect_http_to_https"
         value: false
