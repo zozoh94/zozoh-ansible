@@ -768,12 +768,15 @@ Append under `all.children`. The odroid reaches the API over the public URL, so 
 
 - [ ] **Step 10: Add the private-IP var to `inventories/group_vars/all/vars.yaml`**
 
-OVH VMs resolve the API to its private IP (the odroid overrides this to empty in Step 9):
+OVH agents reach the API through proxy1 (monitor's `:443` speaks the PROXY
+protocol, so only proxy1 may talk to it); they resolve `monitor.zozoh.fr` to
+proxy1's PRIVATE IP. The odroid overrides this to empty in Step 9 (public DNS).
 
 ```yaml
-# Agents on the OVH network reach the Middle Monitor API by its private IP,
-# skipping the proxy hairpin. Overridden to "" on hosts that must use public DNS.
-middlemonitor_agent_api_host_ip: 192.168.3.1
+# Agents reach the Middle Monitor API through proxy1 (its :443 speaks the PROXY
+# protocol). OVH agents cannot hairpin to proxy1's public IP, so they resolve
+# monitor.zozoh.fr to proxy1's PRIVATE IP. Overridden to "" on the odroid.
+middlemonitor_agent_api_host_ip: 192.168.0.225
 ```
 
 - [ ] **Step 11: Add a placeholder token to `inventories/group_vars/all/vault.yaml`**
@@ -870,7 +873,7 @@ git commit -m "feat(middlemonitor-agent): deploy agent fleet-wide (install token
 
 ## Notes and deviations from the spec
 
-- **API hostname resolution.** The spec proposed a `global_hosts` entry applied by the `common` role. The plan instead keeps this inside the agent role as a var-driven `/etc/hosts` line (`middlemonitor_agent_api_host_ip`), so the agent role stays self-contained and runs identically on the odroid (empty = public DNS) without pulling in the `common` role. Set once in `group_vars/all`, overridden to empty on the odroid.
+- **API hostname resolution.** The spec proposed a `global_hosts` entry applied by the `common` role. The plan instead keeps this inside the agent role as a var-driven `/etc/hosts` line (`middlemonitor_agent_api_host_ip`), so the agent role stays self-contained and runs identically on the odroid (empty = public DNS) without pulling in the `common` role. Set once in `group_vars/all`, overridden to empty on the odroid. The value points at proxy1's private IP `192.168.0.225`, not monitor directly: monitor's `:443` speaks the PROXY protocol (SNI passthrough), so a direct agent connection is reset and all agents must go through proxy1. Corrected during first rollout (was `192.168.3.1`).
 - **Scrape / Prometheus targets.** Omitted (YAGNI). The role ships host metrics only. Prometheus scraping, `scrape.d` fragments and discovery are documented upstream and can be layered on later via the same config template.
 - **Initial LE certificate** is a one-time manual `certbot certonly` (Task 3, Step 4), matching how `vaultwarden` is handled; the role manages only renewal and cert-path selection.
 - **VM CPU prerequisite (hit on first deploy 2026-10-08).** The Proxmox VM must run a CPU type that provides x86-64-v2 (`host`, or `x86-64-v2-AES`), set before Task 2. With the default `kvm64`/`qemu64` (x86-64-v1 only), `opensearchproject/opensearch:2` crashes on boot (`Fatal glibc error: CPU does not support x86-64-v2`, `Restarting (127)`) and the stack never comes up. A CPU-type change needs a full stop/start of the VM. Operator-owned (VM config). See memory `proxmox-cpu-x86-64-v2`.

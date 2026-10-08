@@ -39,7 +39,7 @@ risk is the operator's call; this design assumes it is accepted.
 | Deploy artifact | Fetch the upstream `deploy/self-hosted` compose and Caddyfile at a pinned ref unchanged; template only `.env`. Caddy is bound to localhost by setting `HTTP_PORT=127.0.0.1:8000` (the upstream line is `"${HTTP_PORT:-8000}:80"`). Images pulled from `ghcr.io/middle-monitor` pinned by `MM_VERSION`. |
 | Agent install | Fleet path from the agent docs: `get_url` of the versioned binary with checksum from the API's own `/sha256` endpoint, templated `config.yaml` validated with `--config-check`, systemd unit with `ExecReload=/bin/kill -HUP $MAINPID`. No `curl \| bash`. |
 | Agent scope | All OVH managed VMs (inventory `all` minus `monitor`) plus the odroid home box (separate inventory, reaches the API over the public URL). |
-| Agent API URL | `https://monitor.zozoh.fr` everywhere. OVH hosts skip the hairpin via a `global_hosts` entry (`monitor.zozoh.fr` -> `192.168.3.1`), the same trick already used for `smtp.zozoh.fr`. odroid uses public DNS. |
+| Agent API URL | `https://monitor.zozoh.fr` everywhere, always through proxy1. monitor's `:443` speaks the PROXY protocol (SNI passthrough), so only proxy1 may reach it; a direct agent connection is reset. OVH agents cannot hairpin to proxy1's public IP, so they resolve `monitor.zozoh.fr` to proxy1's PRIVATE IP `192.168.0.225` via an `/etc/hosts` entry. odroid uses public DNS (proxy1 public IP). Corrected from the initial "direct to `192.168.3.1`" assumption during first rollout. |
 | Agent auth | An org install token generated from the Middle Monitor UI **after** the server is up, stored in the vault. This creates a hard ordering dependency (see Deployment flow). |
 
 ## Architecture / traffic flow
@@ -54,9 +54,10 @@ Dashboard (browser / odroid agent over public):
                                               --> 127.0.0.1:8000  Caddy (path router)
                                                   --> api / receiver / frontend
 
-OVH agent (no hairpin):
-  agent --> https://monitor.zozoh.fr  (/etc/hosts: monitor.zozoh.fr = 192.168.3.1)
-         --> 192.168.3.1:443  monitor nginx --> Caddy --> receiver
+OVH agent (through proxy1, which adds the PROXY protocol):
+  agent --> https://monitor.zozoh.fr  (/etc/hosts: monitor.zozoh.fr = 192.168.0.225 proxy1)
+         --> proxy1:443 (ssl_preread, proxy_protocol on)
+         --> 192.168.3.1:443  monitor nginx --> 127.0.0.1:8000 Caddy --> receiver
 
 ACME HTTP-01 for the monitor cert:
   client --> proxy1:80  nginx vhost (server_name monitor.zozoh.fr)
