@@ -9,4 +9,7 @@ services:
 {% for host in middlemonitor_proxy_hosts %}
       - "{{ host }}:{{ reverse_proxy_ip }}"
 {% endfor %}
+{% for host, ip in (middlemonitor_container_hosts | default({})).items() %}
+      - "{{ host }}:{{ ip }}"
+{% endfor %}
 {% endfor %}

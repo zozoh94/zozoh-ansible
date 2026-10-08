@@ -36,3 +36,9 @@ middlemonitor_proxy_hosts:
   - autoconfig.lagabelle-saint-hilaire.fr
   - autodiscover.lagabelle-saint-hilaire.fr
   - coolify.zozoh.fr
+
+# Extra name -> IP container mappings (different IP than the proxy). The mail relay
+# smtp.zozoh.fr must resolve to the mail server's private IP: its public DNS points
+# at the proxy, which does not forward 587 (same reason as the common role's global_hosts).
+middlemonitor_container_hosts:
+  smtp.zozoh.fr: 192.168.0.33

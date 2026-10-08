@@ -21,7 +21,12 @@ middlemonitor_explain_mode: rules
 # so checks resolve them to proxy1's private IP instead of hairpinning through the
 # public address. Set the actual list in group_vars; empty disables the override.
 middlemonitor_proxy_hosts: []
-# App services that run outbound checks and therefore need to resolve those domains.
+# Extra name -> IP mappings injected as container extra_hosts (e.g. the mail relay
+# smtp.zozoh.fr, whose public DNS points at the proxy which does not forward 587).
+# Set the actual map in group_vars.
+middlemonitor_container_hosts: {}
+
+# App services that run outbound checks / send mail and need to resolve these names.
 middlemonitor_extra_hosts_services:
   - api
   - receiver
