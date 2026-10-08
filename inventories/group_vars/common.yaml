@@ -10,6 +10,7 @@ group_hosts:
   cloud: 192.168.0.98
   lagabelle-saint-hilaire: 192.168.0.129
   coolify: 192.168.0.193
+  monitor: 192.168.3.1
 
 certbot_certs:
   - domains:
@@ -77,6 +78,9 @@ nginx_upstreams:
   - name: coolify
     servers:
       - "coolify:80"
+  - name: monitor
+    servers:
+      - "monitor:80"
 nginx_extra_http_options: |
   fastcgi_cache_path /var/cache/nginx_cgi levels=1:2 keys_zone=cgi:10m inactive=1h max_size=1g;
   
@@ -114,6 +118,8 @@ nginx_extra_conf_options: |
       autodiscover.lagabelle-saint-hilaire.fr 192.168.0.33:443;
 
       coolify.zozoh.fr 192.168.0.193:443;
+
+      monitor.zozoh.fr 192.168.3.1:443;
       *.zozoh.fr 192.168.0.193:443;
     }
   
@@ -328,4 +334,15 @@ nginx_vhosts:
         {{ _nginx_proxy_headers | indent(8) }}
 
         proxy_pass http://coolify;
+      }
+  - listen: "80"
+    server_name: "monitor.zozoh.fr"
+    filename: "monitor.zozoh.fr-80.conf"
+    extra_parameters: |
+      location / {
+        gzip                    off;
+
+        {{ _nginx_proxy_headers | indent(8) }}
+
+        proxy_pass http://monitor;
       }
