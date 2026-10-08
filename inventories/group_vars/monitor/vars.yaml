@@ -14,3 +14,25 @@ reverse_proxy_ip: 192.168.0.225
 # Pinning. Middle Monitor is young; bump these deliberately.
 middlemonitor_ref: main        # git ref for the fetched compose/Caddyfile
 middlemonitor_version: latest  # MM_VERSION, the ghcr image tag
+
+# Domains reachable through proxy1 (its stream map in group_vars/common.yaml).
+# Injected into the stack's containers as extra_hosts -> reverse_proxy_ip, so
+# Middle Monitor checks reach them over the private network. Keep in sync with
+# the proxy1 map. Excludes the *.zozoh.fr wildcard (no hosts-file wildcards) and
+# monitor.zozoh.fr itself.
+middlemonitor_proxy_hosts:
+  - gitlab.zozoh.fr
+  - registry.zozoh.fr
+  - pages.zozoh.fr
+  - enzo.pages.zozoh.fr
+  - lagabelle-saint-hilaire.fr
+  - media.lagabelle-saint-hilaire.fr
+  - cloud.zozoh.fr
+  - collaboraonline.zozoh.fr
+  - vaultwarden.zozoh.fr
+  - mail.zozoh.fr
+  - autoconfig.zozoh.fr
+  - autodiscover.zozoh.fr
+  - autoconfig.lagabelle-saint-hilaire.fr
+  - autodiscover.lagabelle-saint-hilaire.fr
+  - coolify.zozoh.fr

@@ -28,6 +28,14 @@
   notify: Restart docker compose
   no_log: true
 
+- name: Deploy docker-compose.override.yml (proxy-fronted hosts for checks)
+  ansible.builtin.template:
+    src: docker-compose.override.yml.j2
+    dest: "{{ middlemonitor_dir }}/docker-compose.override.yml"
+    mode: "0644"
+  notify: Restart docker compose
+  when: middlemonitor_proxy_hosts | length > 0
+
 # -- nginx and certbot front (self-terminated TLS, proxy1 passthrough) --
 - name: Install nginx and certbot
   ansible.builtin.apt:

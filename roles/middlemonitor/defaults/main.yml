@@ -17,6 +17,16 @@ middlemonitor_raw_base: "https://raw.githubusercontent.com/middle-monitor/middle
 # Root-cause explanation engine: "rules" needs nothing external.
 middlemonitor_explain_mode: rules
 
+# Domains fronted by proxy1 to inject into the stack's containers as extra_hosts,
+# so checks resolve them to proxy1's private IP instead of hairpinning through the
+# public address. Set the actual list in group_vars; empty disables the override.
+middlemonitor_proxy_hosts: []
+# App services that run outbound checks and therefore need to resolve those domains.
+middlemonitor_extra_hosts_services:
+  - api
+  - receiver
+  - worker
+
 # Optional SMTP for invitations and alert mail. Empty leaves it off.
 middlemonitor_smtp_host: ""
 middlemonitor_smtp_port: 587

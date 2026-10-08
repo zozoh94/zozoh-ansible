@@ -1,0 +1,12 @@
+# Managed by Ansible - do not edit manually
+# Merged automatically with docker-compose.yml. Adds the proxy-fronted domains to
+# the app containers so Middle Monitor's checks resolve them to proxy1's private
+# IP ({{ reverse_proxy_ip }}) instead of hairpinning through the public address.
+services:
+{% for svc in middlemonitor_extra_hosts_services %}
+  {{ svc }}:
+    extra_hosts:
+{% for host in middlemonitor_proxy_hosts %}
+      - "{{ host }}:{{ reverse_proxy_ip }}"
+{% endfor %}
+{% endfor %}
