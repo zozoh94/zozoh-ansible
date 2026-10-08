@@ -1,0 +1,16 @@
+---
+private_network: "192.168.3.0/27"
+admin_network: "192.168.4.0/27"
+
+group_hosts:
+  monitor.ovh.zozoh.fr: 192.168.3.1
+
+# Public domain, fronted by proxy1 (TLS terminated on this VM)
+middlemonitor_domain: monitor.zozoh.fr
+
+# proxy1, the only host trusted to send the PROXY protocol header on :443
+reverse_proxy_ip: 192.168.0.225
+
+# Pinning. Middle Monitor is young; bump these deliberately.
+middlemonitor_ref: main        # git ref for the fetched compose/Caddyfile
+middlemonitor_version: latest  # MM_VERSION, the ghcr image tag

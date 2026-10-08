@@ -43,3 +43,7 @@ all:
       hosts:
         coolify.ovh.zozoh.fr:
           proxmox_vmid: 208
+    monitor:
+      hosts:
+        monitor.ovh.zozoh.fr:
+          proxmox_vmid: 211
