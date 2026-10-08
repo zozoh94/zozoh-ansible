@@ -285,6 +285,14 @@ Steps 5 and 6 cannot precede a running server; the token does not exist until th
    `all:!monitor:!odroid`; any future `hosts: all` playbook must account for it.
 5. **RAM headroom.** OpenSearch alone wants about 3 GB; 6 GB covers the full stack
    with margin. Watch the VM after first boot.
+6. **Proxmox VM CPU type (hit on first deploy 2026-10-08).** A VM created with the
+   default CPU type (`kvm64`/`qemu64`) exposes only x86-64-v1, and the
+   `opensearchproject/opensearch:2` (2.19) image crashes on boot with
+   `Fatal glibc error: CPU does not support x86-64-v2`, looping `Restarting (127)`
+   and blocking api/receiver/worker. The Go MM services likely need v2 too. Fix:
+   set the VM CPU type to `host` (or `x86-64-v2-AES`) on Proxmox, then stop and
+   start the VM (a CPU-type change needs a full stop/start, not a guest reboot).
+   This is operator-owned (VM config). See memory `proxmox-cpu-x86-64-v2`.
 
 ## Success criteria
 
