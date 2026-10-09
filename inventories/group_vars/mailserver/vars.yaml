@@ -37,6 +37,9 @@ mailserver_mailboxes:
   - username: coolify@zozoh.fr
     name: CoolPanda
     password: "{{ vault_mailserver_password_coolify_zozoh }}"
+  - username: immich@zozoh.fr
+    name: Immich
+    password: "{{ vault_mailserver_password_immich_zozoh }}"
   - username: web@lagabelle-saint-hilaire.fr
     name: La Gabelle web
     password: "{{ vault_mailserver_password_web_lagabelle }}"

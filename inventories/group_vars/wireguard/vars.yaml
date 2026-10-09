@@ -1,0 +1,25 @@
+---
+private_network: "10.0.0.0/24"
+admin_network: "10.100.0.0/24"
+
+# VPN VM can't reach the 192.168.0.x production plane; no fleet /etc/hosts entries.
+group_hosts: {}
+
+# --- WireGuard ---
+wireguard_listen_port: 51820
+wireguard_address: "10.200.0.1/24"        # server wg0
+wireguard_client_subnet: "10.200.0.0/24"
+wireguard_admin_route: "192.168.1.0/24"   # admin plane pushed to clients + routed on VM
+wireguard_admin_gateway: "10.100.0.1"     # Proxmox admin-side gateway (vmbr2.100)
+
+wireguard_server_public_key: "birsZqVvHEfpeER+tGHGehuV/RVUp5Fu+iJMDxpQ7R0="
+
+# Declarative peers. Clients generate their own keypair; only the public key
+# and assigned tunnel IP live here. Start empty; real peers added in Task 5.
+wireguard_peers:
+  - name: enzo-laptop
+    public_key: "nZIew3RizsRNvRFaLKkMF1FchSSwzn9Lb/7kkuf/rXU="
+    ip: "10.200.0.2/32"
+  - name: enzo-mac
+    public_key: "xO7hyDBkCtywvdJ682kIv/PeGERgdE+nOnIkqrU1EFA="
+    ip: "10.200.0.3/32"

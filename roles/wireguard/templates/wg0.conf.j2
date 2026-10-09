@@ -1,0 +1,27 @@
+# Ansible-managed — do not edit by hand
+[Interface]
+Address = {{ wireguard_address }}
+ListenPort = {{ wireguard_listen_port }}
+PrivateKey = {{ wireguard_server_private_key }}
+
+# Route the admin plane out the admin NIC (idempotent)
+PostUp   = ip route replace {{ wireguard_admin_route }} via {{ wireguard_admin_gateway }}
+# Forward tunnel traffic (no physical NIC name hardcoded)
+PostUp   = iptables -A FORWARD -i %i -j ACCEPT
+PostUp   = iptables -A FORWARD -o %i -j ACCEPT
+# Masquerade tunnel-bound traffic so VMs can initiate to clients
+PostUp   = iptables -t nat -A POSTROUTING -o %i -j MASQUERADE
+# Masquerade client traffic heading to admin network so admin VMs can reply without a static route
+PostUp   = iptables -t nat -A POSTROUTING -s {{ wireguard_client_subnet }} -o $(ip -o route get {{ wireguard_admin_gateway }} | grep -oP 'dev \K\S+') -j MASQUERADE
+
+PostDown = iptables -t nat -D POSTROUTING -s {{ wireguard_client_subnet }} -o $(ip -o route get {{ wireguard_admin_gateway }} | grep -oP 'dev \K\S+') -j MASQUERADE
+PostDown = iptables -t nat -D POSTROUTING -o %i -j MASQUERADE
+PostDown = iptables -D FORWARD -o %i -j ACCEPT
+PostDown = iptables -D FORWARD -i %i -j ACCEPT
+{% for peer in wireguard_peers %}
+
+[Peer]
+# {{ peer.name }}
+PublicKey = {{ peer.public_key }}
+AllowedIPs = {{ peer.ip }}
+{% endfor %}

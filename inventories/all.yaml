@@ -55,3 +55,7 @@ all:
           ansible_user: enzo
           # Home box: reaches the API over the public URL, no private IP override.
           middlemonitor_agent_api_host_ip: ""
+    wireguard:
+      hosts:
+        vpn.ovh.zozoh.fr:
+          proxmox_vmid: 210
