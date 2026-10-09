@@ -16,3 +16,29 @@
   roles:
     - common
     - riemers.gitlab-runner
+
+  # Docker 29.7+ enables the containerd image store by default. Its push path
+  # skips layers the registry reports as "already exists" without linking them
+  # to the repository, so the manifest PUT fails with "blob unknown to registry"
+  # (moby/moby#53293). The shell executor builds and pushes through this host's
+  # Docker, so pin it back to the classic (overlay2) image store.
+  tasks:
+    - name: Disable Docker containerd image store (classic push path)
+      ansible.builtin.copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "features": {
+              "containerd-snapshotter": false
+            }
+          }
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart docker
+
+  handlers:
+    - name: Restart docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
