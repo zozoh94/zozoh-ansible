@@ -3,11 +3,21 @@
   ansible.builtin.hostname:
     name: "{{ mailserver_hostname.split('.')[0] }}"
 
-- name: Set FQDN in /etc/hosts
+# cloud-init (manage_etc_hosts: True) rebuilds /etc/hosts on every boot and would
+# otherwise restore the original VM name, leaving the short hostname unresolvable
+# (sudo warns "unable to resolve host <name>", which cron mails out). This pins the
+# names cloud-init uses so the 127.0.1.1 line below is what it regenerates.
+- name: Pin fqdn/hostname for cloud-init manage_etc_hosts
+  ansible.builtin.template:
+    src: cloud-hostname.cfg.j2
+    dest: /etc/cloud/cloud.cfg.d/90-zozoh-hostname.cfg
+    mode: "0644"
+
+- name: Map the FQDN on the 127.0.1.1 line (so the short hostname resolves)
   ansible.builtin.lineinfile:
     path: /etc/hosts
-    regexp: '^\s*{{ ansible_default_ipv4.address | default("127.0.1.1") }}'
-    line: "{{ ansible_default_ipv4.address | default('127.0.1.1') }} {{ mailserver_hostname }} {{ mailserver_hostname.split('.')[0] }}"
+    regexp: '^\s*127\.0\.1\.1\b'
+    line: "127.0.1.1 {{ mailserver_hostname }} {{ mailserver_hostname.split('.')[0] }}"
     state: present
 
 - name: Ensure localhost entry exists

@@ -1,0 +1,9 @@
+# Managed by Ansible - do not edit manually
+# cloud-init runs manage_etc_hosts: True and rebuilds /etc/hosts from a template
+# on every boot, substituting its own fqdn/hostname. Without these, it used the
+# original VM name (mailserver.ovh.zozoh.fr) and left the short name "{{ mailserver_hostname.split('.')[0] }}"
+# unresolvable, so every sudo call (e.g. from cron) warned "unable to resolve host".
+# Pinning fqdn/hostname here makes it regenerate "127.0.1.1 {{ mailserver_hostname }} {{ mailserver_hostname.split('.')[0] }}".
+preserve_hostname: true
+fqdn: {{ mailserver_hostname }}
+hostname: {{ mailserver_hostname.split('.')[0] }}
