@@ -32,8 +32,11 @@ middlemonitor_extra_hosts_services:
   - receiver
   - worker
 
-# Optional SMTP for invitations and alert mail. Empty leaves it off.
+# Optional SMTP for invitations and alert mail. The .env SMTP block is emitted only
+# when both the host and the password (from vault) are set, so an incomplete config
+# never ships. Empty host leaves SMTP off.
 middlemonitor_smtp_host: ""
 middlemonitor_smtp_port: 587
 middlemonitor_smtp_user: ""
 middlemonitor_smtp_from: ""
+middlemonitor_smtp_password: ""

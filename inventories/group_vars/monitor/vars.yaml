@@ -42,3 +42,11 @@ middlemonitor_proxy_hosts:
 # at the proxy, which does not forward 587 (same reason as the common role's global_hosts).
 middlemonitor_container_hosts:
   smtp.zozoh.fr: 192.168.0.33
+
+# Outgoing mail (alerts, invitations) through the internal relay on 587/STARTTLS.
+# The password lives in vault.yaml (middlemonitor_smtp_password); the SMTP block is
+# emitted only once that is set. The sending account must exist on the mail server.
+middlemonitor_smtp_host: smtp.zozoh.fr
+middlemonitor_smtp_port: 587
+middlemonitor_smtp_user: monitor@zozoh.fr
+middlemonitor_smtp_from: monitor@zozoh.fr
