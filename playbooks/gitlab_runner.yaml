@@ -37,6 +37,19 @@
         mode: "0644"
       notify: Restart docker
 
+    # Shell-executor jobs build and push through this host's Docker, so every
+    # pipeline leaves behind dangling images and build cache that nothing
+    # reclaims. Prune nightly to keep the disk bounded. The until=72h filter
+    # keeps recent layers so builds stay warm; volumes are left untouched on
+    # purpose (no named volume is in play here and they could hold real data).
+    - name: Schedule nightly Docker prune
+      ansible.builtin.cron:
+        name: "gitlab-runner docker prune"
+        minute: "0"
+        hour: "4"
+        job: "docker system prune -af --filter 'until=72h' >/dev/null 2>&1"
+        user: root
+
   handlers:
     - name: Restart docker
       ansible.builtin.service:
