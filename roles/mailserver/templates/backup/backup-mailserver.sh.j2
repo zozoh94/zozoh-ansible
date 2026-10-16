@@ -3,6 +3,11 @@
 # Daily mailserver backup: PostgreSQL dump + DKIM keys
 set -euo pipefail
 
+# Run from a world-accessible cwd: cron starts us in /root (0700), which the
+# postgres user cannot enter, so `sudo -u postgres` would warn on stderr and
+# cron would mail it. All paths below are absolute, so the cwd is irrelevant.
+cd /
+
 BACKUP_DIR="{{ mailserver_backup_dir }}"
 DATE="$(date +%Y%m%d-%H%M%S)"
 DB_NAME="{{ mailserver_db_name }}"
